@@ -1,6 +1,8 @@
 # Omni Voiceover Studio
 
 Turn a script (for example one written with ChatGPT) into a professional voiceover, ready for YouTube.
+
+**New here? Read the step-by-step [User Guide](USER_GUIDE.md).**
 It is built on the open-source [OmniVoice](https://github.com/k2-fsa/OmniVoice) text-to-speech model.
 
 **What it does to your script**
