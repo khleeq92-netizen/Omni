@@ -1,0 +1,10 @@
+{
+  "name": "hindi_deep_male",
+  "prompt_path": "hindi_deep_male.pt",
+  "source": "design:seed1",
+  "instruct": "male, middle-aged, very low pitch",
+  "speed": 0.93,
+  "language": "hi",
+  "description": "Hindi: very deep, powerful narrator for documentaries, history and mystery.",
+  "builtin": false
+}
