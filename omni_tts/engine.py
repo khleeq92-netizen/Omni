@@ -1,0 +1,188 @@
+"""Narration engine: script text in, mastered voiceover out (OmniVoice)."""
+
+from __future__ import annotations
+
+import random
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable
+
+import numpy as np
+
+from . import mastering
+from .text_clean import prepare_script
+from .voices import (LOCK_SAMPLE_TEXT, PRESETS, VOICES_DIR, SavedVoice,
+                     load_saved, save_meta)
+
+MODEL_ID = "k2-fsa/OmniVoice"
+
+
+def pick_device() -> tuple[str, "object"]:
+    import torch
+    if torch.cuda.is_available():
+        return "cuda:0", torch.float16
+    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        return "mps", torch.float16
+    if hasattr(torch, "xpu") and torch.xpu.is_available():
+        return "xpu", torch.float16
+    return "cpu", torch.float32
+
+
+def set_seed(seed: int | None) -> None:
+    if seed is None:
+        return
+    import torch
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+
+@dataclass
+class NarrationResult:
+    files: dict[str, Path]
+    duration_s: float
+    elapsed_s: float
+    chunks: int
+    text: str
+
+
+class Narrator:
+    def __init__(self, model_id: str = MODEL_ID, device: str | None = None):
+        import torch
+        from omnivoice import OmniVoice
+
+        dev, dtype = pick_device()
+        if device:
+            dev = device
+            dtype = torch.float32 if device == "cpu" else torch.float16
+        self.device = dev
+        self.model = OmniVoice.from_pretrained(model_id, device_map=dev, dtype=dtype)
+        self.sr = self.model.sampling_rate
+        self._prompt_cache: dict[str, object] = {}
+
+    # ------------------------------------------------------------------ voices
+    def _voice_kwargs(self, voice: str) -> tuple[dict, float, str | None]:
+        """Resolve a voice name to generate() kwargs, default speed, language."""
+        from omnivoice import VoiceClonePrompt
+
+        saved = load_saved(voice)
+        if saved:
+            if saved.prompt_path not in self._prompt_cache:
+                self._prompt_cache[saved.prompt_path] = VoiceClonePrompt.load(saved.prompt_path)
+            kw = {"voice_clone_prompt": self._prompt_cache[saved.prompt_path]}
+            if saved.instruct:
+                kw["instruct"] = saved.instruct  # keeps accent/age stable
+            return kw, saved.speed, saved.language
+        if voice in PRESETS:
+            p = PRESETS[voice]
+            return {"instruct": p.instruct}, p.speed, None
+        if voice == "auto":
+            return {}, 1.0, None
+        # Free-form description, e.g. "female, elderly, low pitch"
+        return {"instruct": voice}, 1.0, None
+
+    def audition(self, instruct: str, out_dir: Path, n: int = 3,
+                 text: str = LOCK_SAMPLE_TEXT, language: str | None = "en",
+                 seed_start: int = 1) -> list[tuple[int, Path]]:
+        """Generate ``n`` candidate voices for one description (one per seed)."""
+        import soundfile as sf
+        out_dir.mkdir(parents=True, exist_ok=True)
+        results = []
+        for seed in range(seed_start, seed_start + n):
+            set_seed(seed)
+            audio = self.model.generate(text=text, instruct=instruct, language=language)[0]
+            path = out_dir / f"candidate_seed{seed}.wav"
+            sf.write(path, audio, self.sr)
+            results.append((seed, path))
+        return results
+
+    def lock_voice(self, name: str, instruct: str, seed: int = 1, speed: float = 1.0,
+                   language: str | None = "en") -> SavedVoice:
+        """Design a voice once and save it so every narration sounds identical."""
+        import soundfile as sf
+        import torch
+        set_seed(seed)
+        audio = self.model.generate(text=LOCK_SAMPLE_TEXT, instruct=instruct, language=language)[0]
+        VOICES_DIR.mkdir(parents=True, exist_ok=True)
+        sample = VOICES_DIR / f"{name}_sample.wav"
+        sf.write(sample, audio, self.sr)
+        prompt = self.model.create_voice_clone_prompt(
+            ref_audio=(torch.from_numpy(audio).float().unsqueeze(0), self.sr),
+            ref_text=LOCK_SAMPLE_TEXT,
+        )
+        prompt.save(str(VOICES_DIR / f"{name}.pt"))
+        v = SavedVoice(name=name, prompt_path=f"{name}.pt", source=f"design:seed{seed}",
+                       instruct=instruct, speed=speed, language=language)
+        save_meta(v)
+        self._prompt_cache.pop(str(VOICES_DIR / f"{name}.pt"), None)
+        return v
+
+    def clone_voice(self, name: str, ref_audio: str, ref_text: str | None,
+                    speed: float = 1.0, language: str | None = None) -> SavedVoice:
+        """Save a voice cloned from a 3-10 s recording (only with the speaker's consent)."""
+        if ref_text is None:
+            self.model.load_asr_model()
+        prompt = self.model.create_voice_clone_prompt(ref_audio=ref_audio, ref_text=ref_text)
+        VOICES_DIR.mkdir(parents=True, exist_ok=True)
+        prompt.save(str(VOICES_DIR / f"{name}.pt"))
+        v = SavedVoice(name=name, prompt_path=f"{name}.pt", source=f"clone:{Path(ref_audio).name}",
+                       instruct=None, speed=speed, language=language)
+        save_meta(v)
+        self._prompt_cache.pop(str(VOICES_DIR / f"{name}.pt"), None)
+        return v
+
+    # --------------------------------------------------------------- narration
+    def narrate(self, script: str, out_base: Path, voice: str = "documentary_male",
+                speed: float | None = None, language: str | None = None,
+                quality: str = "high", seed: int | None = 1234,
+                target_lufs: float = mastering.YOUTUBE_LUFS, batch_size: int = 4,
+                sentence_pause: float = 0.35, paragraph_pause: float = 0.75,
+                mp3: bool = True,
+                progress: Callable[[int, int], None] | None = None) -> NarrationResult:
+        t0 = time.time()
+        paragraphs = prepare_script(script)
+        if not paragraphs:
+            raise ValueError("The script has no speakable text after cleaning.")
+        kw, default_speed, voice_lang = self._voice_kwargs(voice)
+        speed = speed if speed is not None else default_speed
+        language = language or voice_lang
+        num_step = {"draft": 12, "fast": 16, "high": 32}.get(quality, 32)
+
+        flat = [c for p in paragraphs for c in p.chunks]
+        audios: list[np.ndarray] = []
+        set_seed(seed)
+        for i in range(0, len(flat), batch_size):
+            batch = flat[i:i + batch_size]
+            n = len(batch)
+            call = dict(text=batch, language=[language] * n, speed=[speed] * n,
+                        num_step=num_step, normalize_text=_tn_available())
+            if "voice_clone_prompt" in kw:
+                call["voice_clone_prompt"] = [kw["voice_clone_prompt"]] * n
+            if "instruct" in kw:
+                call["instruct"] = [kw["instruct"]] * n
+            audios.extend(self.model.generate(**call))
+            if progress:
+                progress(min(i + n, len(flat)), len(flat))
+
+        nested, k = [], 0
+        for p in paragraphs:
+            nested.append(audios[k:k + len(p.chunks)])
+            k += len(p.chunks)
+        full = mastering.assemble(nested, self.sr, sentence_pause, paragraph_pause)
+        full = mastering.master(full, self.sr, target_lufs)
+        files = mastering.export(full, self.sr, out_base, mp3=mp3)
+        clean_text = "\n\n".join(" ".join(p.chunks) for p in paragraphs)
+        out_base.with_suffix(".txt").write_text(clean_text, encoding="utf-8")
+        files["txt"] = out_base.with_suffix(".txt")
+        return NarrationResult(files, len(full) / self.sr, time.time() - t0, len(flat), clean_text)
+
+
+def _tn_available() -> bool:
+    # English/Chinese normalisation needs WeTextProcessing (`pip install omnivoice[tn]`);
+    # without it OmniVoice raises, so only turn it on when it is installed.
+    try:
+        import tn  # noqa: F401
+        return True
+    except Exception:
+        return False
