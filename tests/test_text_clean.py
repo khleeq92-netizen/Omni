@@ -62,3 +62,10 @@ def test_hindi_numbers():
 def test_hindi_sentence_split():
     from omni_tts.text_clean import split_sentences
     assert len(split_sentences("पहला वाक्य। दूसरा वाक्य।", max_chars=12)) == 2
+
+
+def test_hindi_keeps_paragraphs():
+    from omni_tts.hindi import normalize_hindi
+    from omni_tts.text_clean import clean_script
+    paras = clean_script(normalize_hindi("# ताजमहल की कहानी\n\nसन 1632 में।\n\nदूसरा पैरा।"))
+    assert paras == ["ताजमहल की कहानी।", "सन सोलह सौ बत्तीस में।", "दूसरा पैरा।"]

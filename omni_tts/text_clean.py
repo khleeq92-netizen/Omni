@@ -101,6 +101,11 @@ def _clean_line(line: str) -> str:
     return line.strip(" ,")
 
 
+def _stop(text: str) -> str:
+    """Sentence-ending mark in the text's own script (। for Devanagari)."""
+    return "।" if re.search(r"[\u0900-\u097F]", text) else "."
+
+
 def _ends_sentence(text: str) -> bool:
     return bool(re.search(r"[.!?…।؟:;\]]$", text.rstrip("\"'”’)")))
 
@@ -135,11 +140,11 @@ def clean_script(raw: str) -> list[str]:
             flush()
             cleaned = _HEADING_LABEL_RE.sub("", cleaned) or cleaned
             if not _ends_sentence(cleaned):
-                cleaned += "."
+                cleaned += _stop(cleaned)
             paragraphs.append(cleaned)
             continue
         if is_bullet and not _ends_sentence(cleaned):
-            cleaned += "."
+            cleaned += _stop(cleaned)
         current.append(cleaned)
     flush()
     paragraphs = [p for p in paragraphs if re.search(r"\w", p)]

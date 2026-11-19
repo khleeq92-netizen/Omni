@@ -86,7 +86,7 @@ def normalize_hindi(text: str) -> str:
         return out
 
     text = re.sub(r"(₹|रु\.?\s?|Rs\.?\s?)?(\d[\d,]*\d|\d)(?:\.(\d+))?(?:\s?(%))?", repl, text)
-    return re.sub(r"\s{2,}", " ", text)
+    return re.sub(r"[ \t]{2,}", " ", text)  # keep line breaks (paragraphs)
 
 
 def script_check(text: str) -> str | None:
