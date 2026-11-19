@@ -1,0 +1,10 @@
+{
+  "name": "motivation_male",
+  "prompt_path": "motivation_male.pt",
+  "source": "design:seed3",
+  "instruct": "male, young adult, low pitch, american accent",
+  "speed": 0.97,
+  "language": "en",
+  "description": "Strong, energetic American voice: motivation, sports, Shorts.",
+  "builtin": false
+}
