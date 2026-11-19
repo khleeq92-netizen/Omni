@@ -1,0 +1,10 @@
+{
+  "name": "indian_power_male",
+  "prompt_path": "indian_power_male.pt",
+  "source": "design:seed1",
+  "instruct": "male, middle-aged, low pitch, indian accent",
+  "speed": 0.95,
+  "language": "en",
+  "description": "Deep Indian-English voice with authority: facts, news, explainers.",
+  "builtin": false
+}
