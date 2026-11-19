@@ -50,6 +50,21 @@ def assemble(paragraphs: list[list[np.ndarray]], sr: int,
     return np.concatenate(parts)
 
 
+def change_tempo(audio: np.ndarray, sr: int, speed: float) -> np.ndarray:
+    """Speed up / slow down without changing pitch (ffmpeg atempo)."""
+    import tempfile
+    if not shutil.which("ffmpeg"):
+        return audio
+    speed = min(max(speed, 0.5), 2.0)
+    with tempfile.TemporaryDirectory() as d:
+        src, dst = Path(d) / "in.wav", Path(d) / "out.wav"
+        sf.write(src, audio, sr)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src),
+                        "-filter:a", f"atempo={speed:.3f}", str(dst)], check=True)
+        out, _ = sf.read(dst, dtype="float32")
+    return out
+
+
 def master(audio: np.ndarray, sr: int, target_lufs: float = YOUTUBE_LUFS) -> np.ndarray:
     audio = audio.astype(np.float64)
     # 1. High-pass at 70 Hz: removes rumble/DC without thinning the voice.

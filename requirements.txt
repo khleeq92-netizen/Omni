@@ -3,4 +3,5 @@ omnivoice>=0.2.1
 omnivoice[tn]>=0.2.1     # reads numbers/dates correctly ("1859" -> "eighteen fifty-nine")
 pyloudnorm>=0.1.1
 scipy
+snac                     # audio decoder for the Veena Hindi engine
 gradio

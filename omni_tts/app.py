@@ -14,9 +14,13 @@ from pathlib import Path
 import gradio as gr
 
 from .engine import Narrator
+from . import pronounce
 from .voices import PRESETS, all_voice_names, list_saved
 
+DESIGN_PRESETS = [n for n, p in PRESETS.items() if p.engine == "omnivoice"]
+
 OUT_DIR = Path("output")
+re_deva = re.compile(r"[\u0900-\u097F]")
 _narrator: Narrator | None = None
 
 
@@ -35,6 +39,9 @@ def _describe(voice: str) -> str:
     saved = {v.name: v for v in list_saved()}
     if voice in saved:
         return f"Saved voice ({saved[voice].source}), sounds identical every time."
+    if voice in PRESETS and PRESETS[voice].engine == "veena":
+        return (f"{PRESETS[voice].description} · Fixed voice, sounds the same every time. "
+                "Hindi in Devanagari, English, or mixed Hinglish all work.")
     if voice in PRESETS:
         lang = " · Language: Hindi (write the script in Devanagari)" if PRESETS[voice].language == "hi" else ""
         return f"{PRESETS[voice].description}{lang} · Preset: save it in the Voices tab for full consistency."
@@ -142,7 +149,7 @@ def build() -> gr.Blocks:
         with gr.Tab("Voices"):
             gr.Markdown("### 1. Audition\nPick a preset (or describe a voice) and hear a few versions.")
             with gr.Row():
-                preset = gr.Dropdown(list(PRESETS), value="documentary_male", label="Preset")
+                preset = gr.Dropdown(DESIGN_PRESETS, value="documentary_male", label="Preset")
                 a_custom = gr.Textbox(label="Or your own description")
                 count = gr.Slider(1, 4, value=3, step=1, label="How many versions")
             a_btn = gr.Button("Audition")
@@ -168,6 +175,33 @@ def build() -> gr.Blocks:
             c_btn = gr.Button("Save cloned voice")
             c_msg = gr.Markdown()
             c_btn.click(do_clone, [c_name, c_audio, c_text, c_consent], [c_msg, voice])
+        with gr.Tab("Pronunciation"):
+            gr.Markdown(
+                "### Fix words that are spoken wrongly\n"
+                "Write one fix per line as **`word = how to say it`**. Fixes apply to every voiceover, "
+                "in every language, and are kept with your saved voices (in Google Drive when it is on).\n\n"
+                "Examples: `शाहजहाँ = शाह जहाँ` · `GIF = जिफ़` · `Omni = ओमनी`\n\n"
+                "Tip: spell the word in Hindi the way it should *sound*, splitting it with a space if needed.")
+            p_text = gr.Textbox(value=pronounce.load_text(), lines=14, label="Your fixes")
+            with gr.Row():
+                p_save = gr.Button("Save fixes", variant="primary")
+                p_try_in = gr.Textbox(label="Test a sentence", placeholder="Type a sentence to see how it will be read")
+            p_try_out = gr.Textbox(label="It will be read as", interactive=False)
+            p_msg = gr.Markdown()
+
+            def _save(t):
+                return f"Saved {pronounce.save_text(t)} fixes."
+
+            def _try(sentence, rules_text, voice_name):
+                from .hindi import normalize_hindi
+                out = pronounce.apply(sentence or "", pronounce.parse(rules_text))
+                p = PRESETS.get(voice_name)
+                if p and p.language == "hi" or re_deva.search(out):
+                    out = normalize_hindi(out, english_to_devanagari=not (p and p.engine == "veena"))
+                return out
+
+            p_save.click(_save, p_text, p_msg)
+            p_try_in.submit(_try, [p_try_in, p_text, voice], p_try_out)
     return demo
 
 

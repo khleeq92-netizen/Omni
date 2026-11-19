@@ -41,6 +41,7 @@ class Preset:
     description: str
     speed: float = 1.0
     language: str | None = "en"
+    engine: str = "omnivoice"   # "veena": instruct holds the Veena speaker name
 
 
 PRESETS: dict[str, Preset] = {
@@ -78,6 +79,12 @@ PRESETS: dict[str, Preset] = {
                "Hindi narrator, energetic, for motivation and Shorts.", 1.0, "hi"),
         Preset("hindi_mystery", "male, young adult, low pitch, whisper",
                "Hindi whispered voice for horror and mystery.", 0.9, "hi"),
+        # Veena engine: trained on Indian speech; best Hindi pronunciation and
+        # reads Hinglish (Hindi with English words) naturally.
+        Preset("veena_kavya", "kavya", "Veena (Hindi specialist): voice Kavya", 1.0, "hi", "veena"),
+        Preset("veena_agastya", "agastya", "Veena (Hindi specialist): voice Agastya", 1.0, "hi", "veena"),
+        Preset("veena_maitri", "maitri", "Veena (Hindi specialist): voice Maitri", 1.0, "hi", "veena"),
+        Preset("veena_vinaya", "vinaya", "Veena (Hindi specialist): voice Vinaya", 1.0, "hi", "veena"),
     ]
 }
 

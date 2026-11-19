@@ -13,6 +13,7 @@ import numpy as np
 
 from . import mastering
 from .text_clean import prepare_script
+from . import pronounce
 from .hindi import normalize_hindi, script_check
 from .voices import (PRESETS, VOICES_DIR, SavedVoice, load_saved, lock_sample,
                      save_meta)
@@ -50,26 +51,46 @@ class NarrationResult:
 
 
 class Narrator:
+    """Both engines are loaded on first use, so using only one costs only its memory."""
+
     def __init__(self, model_id: str = MODEL_ID, device: str | None = None):
         import torch
-        from omnivoice import OmniVoice
-
         dev, dtype = pick_device()
         if device:
             dev = device
             dtype = torch.float32 if device == "cpu" else torch.float16
-        self.device = dev
-        self.model = OmniVoice.from_pretrained(model_id, device_map=dev, dtype=dtype)
-        self.sr = self.model.sampling_rate
+        self.device, self._dtype, self._model_id = dev, dtype, model_id
+        self._model = None
+        self._veena = None
+        self.sr = 24000
         self._prompt_cache: dict[str, object] = {}
+        self.warnings: list[str] = []
+
+    @property
+    def model(self):
+        if self._model is None:
+            from omnivoice import OmniVoice
+            self._model = OmniVoice.from_pretrained(self._model_id, device_map=self.device,
+                                                    dtype=self._dtype)
+            self.sr = self._model.sampling_rate
+        return self._model
+
+    @property
+    def veena(self):
+        if self._veena is None:
+            from .veena import VeenaEngine
+            self._veena = VeenaEngine(device=self.device)
+        return self._veena
 
     # ------------------------------------------------------------------ voices
     def _voice_kwargs(self, voice: str) -> tuple[dict, float, str | None]:
         """Resolve a voice name to generate() kwargs, default speed, language."""
-        from omnivoice import VoiceClonePrompt
-
+        if voice in PRESETS and PRESETS[voice].engine == "veena":
+            p = PRESETS[voice]
+            return {"veena_speaker": p.instruct}, p.speed, p.language
         saved = load_saved(voice)
         if saved:
+            from omnivoice import VoiceClonePrompt
             if saved.prompt_path not in self._prompt_cache:
                 self._prompt_cache[saved.prompt_path] = VoiceClonePrompt.load(saved.prompt_path)
             kw = {"voice_clone_prompt": self._prompt_cache[saved.prompt_path]}
@@ -159,15 +180,19 @@ class Narrator:
                 mp3: bool = True,
                 progress: Callable[[int, int], None] | None = None) -> NarrationResult:
         t0 = time.time()
-        self.warnings: list[str] = []
+        self.warnings = []
         kw, default_speed, voice_lang = self._voice_kwargs(voice)
+        use_veena = "veena_speaker" in kw
         language = language or voice_lang
         is_hindi = (language or "").lower() in ("hi", "hindi")
+        script = pronounce.apply(script)
         if is_hindi:
-            if (w := script_check(script)):
+            # Veena reads Hinglish natively; OmniVoice needs English words in Devanagari.
+            if not use_veena and (w := script_check(script)):
                 self.warnings.append(w)
-            script = normalize_hindi(script)
-        paragraphs = prepare_script(script)
+            script = normalize_hindi(script, english_to_devanagari=not use_veena)
+        # Veena works best on shorter pieces (its context is 2048 tokens).
+        paragraphs = prepare_script(script, max_chars=160 if use_veena else 300)
         if not paragraphs:
             raise ValueError("The script has no speakable text after cleaning.")
         speed = speed if speed is not None else default_speed
@@ -176,7 +201,16 @@ class Narrator:
         flat = [c for p in paragraphs for c in p.chunks]
         audios: list[np.ndarray] = []
         set_seed(seed)
-        for i in range(0, len(flat), batch_size):
+        if use_veena:
+            if not is_hindi and _tn_available():
+                from omnivoice.utils.text import normalize_text as _norm
+                flat = [_norm(c, "en") for c in flat]
+            for i, chunk in enumerate(flat):
+                audios.append(self.veena.generate(chunk, kw["veena_speaker"],
+                                                  seed=None if seed is None else seed + i))
+                if progress:
+                    progress(i + 1, len(flat))
+        for i in range(0, 0 if use_veena else len(flat), batch_size):
             batch = flat[i:i + batch_size]
             n = len(batch)
             call = dict(text=batch, language=[language] * n, speed=[speed] * n,
@@ -195,6 +229,8 @@ class Narrator:
             nested.append(audios[k:k + len(p.chunks)])
             k += len(p.chunks)
         full = mastering.assemble(nested, self.sr, sentence_pause, paragraph_pause)
+        if use_veena and abs(speed - 1.0) > 0.01:
+            full = mastering.change_tempo(full, self.sr, speed)  # Veena has no speed control
         full = mastering.master(full, self.sr, target_lufs)
         files = mastering.export(full, self.sr, out_base, mp3=mp3)
         clean_text = "\n\n".join(" ".join(p.chunks) for p in paragraphs)

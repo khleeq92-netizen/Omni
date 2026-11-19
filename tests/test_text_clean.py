@@ -69,3 +69,23 @@ def test_hindi_keeps_paragraphs():
     from omni_tts.text_clean import clean_script
     paras = clean_script(normalize_hindi("# ताजमहल की कहानी\n\nसन 1632 में।\n\nदूसरा पैरा।"))
     assert paras == ["ताजमहल की कहानी।", "सन सोलह सौ बत्तीस में।", "दूसरा पैरा।"]
+
+
+def test_hindi_english_words_and_formats():
+    from omni_tts.hindi import normalize_hindi
+    assert normalize_hindi("NASA और ISRO का mission") == "नासा और इसरो का मिशन"
+    assert normalize_hindi("video को like करें") == "वीडियो को लाइक करें"
+    assert normalize_hindi("21वीं सदी में AI") == "इक्कीसवीं सदी में एआई"
+    assert normalize_hindi("10:30 बजे 45°C") == "साढ़े दस बजे पैंतालीस डिग्री सेल्सियस"
+    assert normalize_hindi("7:15 पर 120 km") == "सात बजकर पंद्रह मिनट पर एक सौ बीस किलोमीटर"
+    assert normalize_hindi("[laughter] वाह") == "[laughter] वाह"
+    # Veena keeps English words (reads Hinglish natively)
+    assert normalize_hindi("video को like करें", english_to_devanagari=False) == "video को like करें"
+
+
+def test_pronunciation_rules():
+    from omni_tts.pronounce import apply, parse
+    rules = parse("# comment\nशाहजहाँ = शाह जहाँ\nYouTube = यूट्यूब\nbad line\n")
+    assert rules == {"शाहजहाँ": "शाह जहाँ", "YouTube": "यूट्यूब"}
+    assert apply("शाहजहाँ ने youtube देखा", rules) == "शाह जहाँ ने यूट्यूब देखा"
+    assert apply("शाहजहाँओं", rules) == "शाहजहाँओं"  # whole words only

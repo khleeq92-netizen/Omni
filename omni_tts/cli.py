@@ -16,6 +16,8 @@ from pathlib import Path
 
 from .voices import PRESETS, list_saved
 
+DESIGN_PRESETS = [n for n, p in PRESETS.items() if p.engine == "omnivoice"]
+
 
 def _slug(s: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]+", "_", s).strip("_")[:60] or "narration"
@@ -122,7 +124,7 @@ def main(argv: list[str] | None = None) -> None:
     v.set_defaults(func=cmd_voices)
 
     a = sub.add_parser("audition", help="try candidate voices for a description")
-    a.add_argument("--preset", choices=list(PRESETS))
+    a.add_argument("--preset", choices=DESIGN_PRESETS)
     a.add_argument("--instruct")
     a.add_argument("-n", type=int, default=3)
     a.add_argument("--language", default=None, help="default: the preset's language")
@@ -131,7 +133,7 @@ def main(argv: list[str] | None = None) -> None:
 
     lk = sub.add_parser("lock", help="save a designed voice permanently")
     lk.add_argument("name")
-    lk.add_argument("--preset", choices=list(PRESETS))
+    lk.add_argument("--preset", choices=DESIGN_PRESETS)
     lk.add_argument("--instruct")
     lk.add_argument("--seed", type=int, default=1)
     lk.add_argument("--speed", type=float, default=None)
