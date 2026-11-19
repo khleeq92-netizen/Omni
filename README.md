@@ -58,6 +58,13 @@ Tick **"Preview with my script's first line"** to hear the voice reading your ow
    It is stored in `voices/` and from then on it sounds identical in every video.
 3. **Clone:** upload a 3–10 second clean recording of your own voice, or of someone who has given permission.
 
+### Ready-made strong male voices (identical every time)
+`deep_narrator_male`, `power_british_male`, `motivation_male`, `indian_power_male` (English) and
+`hindi_deep_male`, `hindi_power_male`, `hindi_legend_male` (Hindi), stored in `omni_tts/builtin_voices/`.
+They were made with `tools/make_builtin_voices.py`, which designs 3 variations per voice and keeps the deepest
+clear one (pitch measured with pYIN, clarity with Whisper). The Hindi ones are then lowered 3–4 semitones, because
+Hindi voice design alone stays around 130–145 Hz.
+
 ### Built-in voice presets
 | Preset | Sound | Good for |
 |---|---|---|

@@ -6,5 +6,6 @@
   "speed": 0.97,
   "language": "hi",
   "description": "Hindi: strong, energetic voice for motivation, sports and Shorts.",
-  "builtin": false
+  "builtin": false,
+  "deepened": -3
 }

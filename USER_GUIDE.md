@@ -80,6 +80,20 @@ Click **🔊 Preview voice** to hear a short sample before converting the whole 
 
 ## Part 3: Voices
 
+### ⭐ Ready-made strong male voices
+These are already saved, so they sound **identical in every video**, with no auditioning needed. Each was picked automatically
+from 3 variations as the deepest one that still spoke every word clearly, and was recorded from a dramatic line so it keeps a forceful delivery.
+
+| Voice | Language | Sound | Good for |
+|---|---|---|---|
+| `deep_narrator_male` | English | Very deep, powerful, American | Trailers, documentaries, epic stories |
+| `power_british_male` | English | Deep, commanding, British | History, serious topics |
+| `motivation_male` | English | Strong, energetic, American | Motivation, sports, Shorts |
+| `indian_power_male` | English | Deep, Indian accent, authoritative | Facts, news, explainers |
+| `hindi_deep_male` | Hindi | Very deep, powerful | Documentaries, history, mystery |
+| `hindi_power_male` | Hindi | Strong, energetic | Motivation, sports, Shorts |
+| `hindi_legend_male` | Hindi | Deep, aged, dramatic | Kahani, legends, spiritual topics |
+
 ### English voices
 | Voice | Sound | Good for |
 |---|---|---|

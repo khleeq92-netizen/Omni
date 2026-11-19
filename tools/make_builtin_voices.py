@@ -9,6 +9,14 @@ best as a ready-made saved voice in omni_tts/builtin_voices/.
 A variation must sound male (median F0 < 165 Hz) and be clear; among those,
 the deepest wins (clarity breaks near-ties).
 
+Hindi voice design does not go very deep (OmniVoice's voice-design controls
+were trained on English/Chinese), so Hindi voices are then "deepened": the
+chosen sample is pitch-shifted down a few semitones and the voice is rebuilt
+from it. Tested on a new sentence: 131->106 Hz, 145->121 Hz, 133->107 Hz with
+speech still clearly intelligible.
+
+  python tools/make_builtin_voices.py --deepen-only   # just re-apply deepening
+
 Run:  python tools/make_builtin_voices.py [--seeds 3] [--only name1,name2]
 """
 
@@ -27,6 +35,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from omni_tts.engine import Narrator  # noqa: E402
 from omni_tts.voices import BUILTIN_DIR, IMPACT_SAMPLES  # noqa: E402
+
+# Semitones to lower each voice by after selection (0 = unchanged).
+DEEPEN = {"hindi_deep_male": -4, "hindi_power_male": -3, "hindi_legend_male": -4}
 
 VOICES = [
     # name, instruct, language, speed, description
@@ -69,12 +80,41 @@ def median_f0(path: Path) -> float:
     return float(np.nanmedian(f0[voiced])) if np.any(voiced) else float("nan")
 
 
+def deepen(narrator, name: str, semitones: int) -> None:
+    """Rebuild a built-in voice from its sample pitch-shifted down by ``semitones``."""
+    import librosa
+    import soundfile as sf
+    import torch
+    meta_path = BUILTIN_DIR / f"{name}.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    if meta.get("deepened"):
+        print(f"{name}: already deepened by {meta['deepened']} semitones, skipping")
+        return
+    wav = BUILTIN_DIR / f"{name}_sample.wav"
+    y, sr = sf.read(wav, dtype="float32")
+    y = librosa.effects.pitch_shift(y, sr=sr, n_steps=semitones, res_type="soxr_hq")
+    text = IMPACT_SAMPLES[meta.get("language") or "en"]
+    prompt = narrator.model.create_voice_clone_prompt(
+        ref_audio=(torch.from_numpy(y).unsqueeze(0), sr), ref_text=text)
+    prompt.save(str(BUILTIN_DIR / f"{name}.pt"))
+    sf.write(wav, y, sr)
+    meta["deepened"] = semitones
+    meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"==> {name}: deepened by {semitones} semitones", flush=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=3)
     ap.add_argument("--only", default="")
     ap.add_argument("--work", default="output/builtin_candidates")
+    ap.add_argument("--deepen-only", action="store_true")
     args = ap.parse_args()
+    if args.deepen_only:
+        narrator = Narrator()
+        for name, st in DEEPEN.items():
+            deepen(narrator, name, st)
+        return
 
     from transformers import pipeline
     asr = pipeline("automatic-speech-recognition", model="openai/whisper-small", device="cpu")
@@ -113,6 +153,8 @@ def main() -> None:
                                                   encoding="utf-8")
         report.append({"name": name, "chosen_seed": best["seed"], "candidates": cands})
         print(f"==> {name}: kept seed {best['seed']} (F0 {best['f0']} Hz, CER {best['cer']})", flush=True)
+        if DEEPEN.get(name):
+            deepen(narrator, name, DEEPEN[name])
 
     (work / "report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
 

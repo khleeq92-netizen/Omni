@@ -6,5 +6,6 @@
   "speed": 0.93,
   "language": "hi",
   "description": "Hindi: very deep, powerful narrator for documentaries, history and mystery.",
-  "builtin": false
+  "builtin": false,
+  "deepened": -4
 }

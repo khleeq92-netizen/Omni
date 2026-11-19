@@ -6,5 +6,6 @@
   "speed": 0.9,
   "language": "hi",
   "description": "Hindi: deep, aged, dramatic voice for kahani, legends and spiritual topics.",
-  "builtin": false
+  "builtin": false,
+  "deepened": -4
 }
