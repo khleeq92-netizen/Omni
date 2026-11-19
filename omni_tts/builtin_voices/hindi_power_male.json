@@ -1,0 +1,10 @@
+{
+  "name": "hindi_power_male",
+  "prompt_path": "hindi_power_male.pt",
+  "source": "design:seed3",
+  "instruct": "male, young adult, low pitch",
+  "speed": 0.97,
+  "language": "hi",
+  "description": "Hindi: strong, energetic voice for motivation, sports and Shorts.",
+  "builtin": false
+}
