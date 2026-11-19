@@ -103,6 +103,22 @@ Click **🔊 Preview voice** to hear a short sample before converting the whole 
 | `hindi_young_male` | Energetic | Motivation, Shorts |
 | `hindi_mystery` | Whispered | Horror, mystery |
 
+### Veena voices: Hindi specialist ⭐ best for Hindi pronunciation
+Veena is a second voice engine, trained by Maya Research on Indian speech. It reads **Hindi, English and mixed Hinglish** naturally,
+e.g. *"आज हम NASA के नए mission की बात करेंगे"*, with the English words kept as they are.
+
+| Voice | Sound | Good for |
+|---|---|---|
+| `veena_kavya` | Warm, medium pitch | All-rounder: facts, stories |
+| `veena_agastya` | Clear, medium pitch | Steady narration |
+| `veena_maitri` | Bright, higher pitch, expressive | Shorts, energetic videos |
+| `veena_vinaya` | Calm, medium pitch | Explainers, news |
+
+- All four Veena voices are in the **female pitch range**. For a **male** Hindi voice, use `hindi_male` or `hindi_storyteller`, or clone a male voice.
+- Veena voices are fixed, so they sound the same every time without being saved.
+- Veena is slower: roughly 2–4 minutes of generating per minute of audio on Colab's free GPU (OmniVoice takes well under 1 minute).
+- The first time you use a Veena voice, it downloads about 6.5 GB (3–5 minutes).
+
 ### Describe your own voice
 In the **"Or describe a voice"** box, combine one choice from each group, separated by commas:
 
@@ -159,8 +175,19 @@ Preset voices change slightly between runs. For a channel, save one fixed voice:
    | ₹500 | पाँच सौ रुपये |
    | 25% | पच्चीस प्रतिशत |
    | 3.5 | तीन दशमलव पाँच |
-3. **Choose a Hindi voice** (`hindi_male`, `hindi_female` and so on). The language switches to Hindi on its own.
-4. **The "accent" setting only works for English.** For Hindi voices, choose gender, age and pitch.
+3. **English words inside Hindi are handled for you:** *video, like, subscribe, NASA, AI, GDP* become वीडियो, लाइक, सब्सक्राइब, नासा, एआई, जीडीपी.
+   Times, units and symbols too: 10:30 → साढ़े दस बजे, 45°C → पैंतालीस डिग्री सेल्सियस, 120 km → एक सौ बीस किलोमीटर, & → और.
+   (With Veena voices, English words are kept in English, because Veena reads Hinglish naturally.)
+4. **Choose a Hindi voice** (`veena_…` for the best pronunciation, or `hindi_…`). The language switches to Hindi on its own.
+5. **The "accent" setting only works for English.** For Hindi voices, choose gender, age and pitch.
+
+### Fix a word that is spoken wrongly (Pronunciation tab)
+1. Open the **Pronunciation** tab in the app.
+2. Add a line like `शाहजहाँ = शाह जहाँ`, i.e. the word, `=`, then how it should *sound*.
+3. Click **Save fixes**. From now on the word is said correctly in every voiceover.
+4. To check a fix, type a sentence in **Test a sentence** and press Enter to see exactly how it will be read.
+
+Your fixes are saved with your voices, so they're kept in Google Drive when `USE_DRIVE = True`.
 
 ---
 
@@ -253,7 +280,8 @@ But there was no one on board. Not a single person.
 | The **gradio.live link stopped working** | Colab disconnected. Click **Run all** again to get a new link |
 | **"You cannot connect to a GPU"** | The free GPU limit is reached for today. Try again later, or use Colab Pro |
 | **First voiceover is very slow** | Normal: the model downloads once per session (3–5 minutes) |
-| **Hindi sounds wrong** | Make sure the script is in Devanagari, and pick a `hindi_…` voice |
+| **Hindi sounds wrong** | Try a `veena_…` voice; make sure the script is in Devanagari (or Hinglish for Veena) |
+| **One word is always wrong** | Add it in the **Pronunciation** tab |
 | **A word is pronounced wrong** | Spell it the way it sounds, or use phoneme spelling for English |
 | **Saved voice disappeared** | Turn on `USE_DRIVE = True` so voices are kept in Google Drive |
 

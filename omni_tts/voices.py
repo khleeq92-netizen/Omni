@@ -81,10 +81,10 @@ PRESETS: dict[str, Preset] = {
                "Hindi whispered voice for horror and mystery.", 0.9, "hi"),
         # Veena engine: trained on Indian speech; best Hindi pronunciation and
         # reads Hinglish (Hindi with English words) naturally.
-        Preset("veena_kavya", "kavya", "Veena (Hindi specialist): voice Kavya", 1.0, "hi", "veena"),
-        Preset("veena_agastya", "agastya", "Veena (Hindi specialist): voice Agastya", 1.0, "hi", "veena"),
-        Preset("veena_maitri", "maitri", "Veena (Hindi specialist): voice Maitri", 1.0, "hi", "veena"),
-        Preset("veena_vinaya", "vinaya", "Veena (Hindi specialist): voice Vinaya", 1.0, "hi", "veena"),
+        Preset("veena_kavya", "kavya", "Veena Hindi specialist, Kavya: warm, medium-pitched female voice; good all-rounder for facts and stories.", 1.0, "hi", "veena"),
+        Preset("veena_agastya", "agastya", "Veena Hindi specialist, Agastya: clear, medium-pitched voice; steady narration.", 1.0, "hi", "veena"),
+        Preset("veena_maitri", "maitri", "Veena Hindi specialist, Maitri: bright, higher-pitched, expressive female voice; Shorts and energetic videos.", 1.0, "hi", "veena"),
+        Preset("veena_vinaya", "vinaya", "Veena Hindi specialist, Vinaya: calm, medium-pitched voice; explainers and news.", 1.0, "hi", "veena"),
     ]
 }
 

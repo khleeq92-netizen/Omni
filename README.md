@@ -75,6 +75,14 @@ Tick **"Preview with my script's first line"** to hear the voice reading your ow
 | `hindi_young_male` | Hindi, energetic | Motivation, Shorts |
 | `hindi_mystery` | Hindi, whispered | Horror, mystery |
 
+### Veena engine (Hindi specialist)
+`veena_kavya`, `veena_agastya`, `veena_maitri` and `veena_vinaya` use [Veena](https://huggingface.co/maya-research/Veena)
+(Maya Research, Apache-2.0), a 3B model trained on Indian speech. It reads Hindi, English and Hinglish natively.
+All four are in the female pitch range, and it is slower than OmniVoice.
+
+### Pronunciation fixes
+In the **Pronunciation** tab (or `voices/pronunciations.txt`), add `word = how to say it`, one per line. The rules apply to every voiceover.
+
 ### Hindi narration
 - **Write the script in Devanagari** (ask ChatGPT: *"Write this script in Hindi, Devanagari script"*).
   Roman Hindi (Hinglish) is pronounced poorly, and the app warns you if it detects it.
@@ -131,6 +139,9 @@ If a video contains realistic synthetic content, follow YouTube's AI-content dis
 omni_tts/text_clean.py   script cleaning and sentence splitting
 omni_tts/voices.py       presets and saved voices
 omni_tts/engine.py       OmniVoice narration, auditions, voice locking and cloning
+omni_tts/veena.py        Veena engine (Hindi/English/Hinglish)
+omni_tts/hindi.py        Hindi numbers, English words, times, units
+omni_tts/pronounce.py    user pronunciation rules
 omni_tts/mastering.py    pauses, high-pass filter, loudness, limiter, export
 omni_tts/app.py          web app (Gradio)
 omni_tts/cli.py          command line
