@@ -1,0 +1,10 @@
+{
+  "name": "power_british_male",
+  "prompt_path": "power_british_male.pt",
+  "source": "design:seed2",
+  "instruct": "male, middle-aged, very low pitch, british accent",
+  "speed": 0.93,
+  "language": "en",
+  "description": "Deep, commanding British voice: history, documentaries, serious topics.",
+  "builtin": false
+}
