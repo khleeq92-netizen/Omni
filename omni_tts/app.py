@@ -36,9 +36,13 @@ def _voice_choices() -> list[str]:
 
 
 def _describe(voice: str) -> str:
-    saved = {v.name: v for v in list_saved()}
-    if voice in saved:
-        return f"Saved voice ({saved[voice].source}), sounds identical every time."
+    from .voices import load_saved
+    v = load_saved(voice)
+    if v and v.builtin:
+        lang = "Hindi" if v.language == "hi" else "English"
+        return f"⭐ Ready-made voice ({lang}): {v.description} Sounds identical every time."
+    if v:
+        return f"Your saved voice ({v.source}), sounds identical every time."
     if voice in PRESETS and PRESETS[voice].engine == "veena":
         return (f"{PRESETS[voice].description} · Fixed voice, sounds the same every time. "
                 "Hindi in Devanagari, English, or mixed Hinglish all work.")

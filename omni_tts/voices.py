@@ -14,6 +14,18 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 VOICES_DIR = Path(__file__).resolve().parent.parent / "voices"
+# Ready-made saved voices shipped with the tool (kept separate from VOICES_DIR,
+# which Colab may replace with a Google Drive folder).
+BUILTIN_DIR = Path(__file__).resolve().parent / "builtin_voices"
+
+# Dramatic sample lines: a voice saved from a forceful delivery keeps that
+# energy, which suits "impactful" narrator voices.
+IMPACT_SAMPLES = {
+    "en": ("This is the story of a man who refused to give up. When the whole world said no, "
+           "he stood up, and he changed everything."),
+    "hi": ("यह कहानी है एक ऐसे इंसान की, जिसने कभी हार नहीं मानी। जब पूरी दुनिया ने कहा नहीं, "
+           "तब वह उठ खड़ा हुआ, और उसने सब कुछ बदल दिया।"),
+}
 
 # Sample text used when locking a voice. It is calm, neutral narration so the
 # saved voice is suited to long-form voiceover.
@@ -97,41 +109,52 @@ class SavedVoice:
     instruct: str | None
     speed: float = 1.0
     language: str | None = None
+    description: str = ""
+    builtin: bool = False
 
 
-def _meta_path(name: str) -> Path:
-    return VOICES_DIR / f"{name}.json"
-
-
-def save_meta(v: SavedVoice) -> None:
-    VOICES_DIR.mkdir(parents=True, exist_ok=True)
-    _meta_path(v.name).write_text(json.dumps(asdict(v), indent=2), encoding="utf-8")
+def save_meta(v: SavedVoice, directory: Path = VOICES_DIR) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / f"{v.name}.json").write_text(json.dumps(asdict(v), indent=2, ensure_ascii=False),
+                                              encoding="utf-8")
 
 
 def load_saved(name: str) -> SavedVoice | None:
-    p = _meta_path(name)
-    if not p.exists():
-        return None
-    data = json.loads(p.read_text(encoding="utf-8"))
-    v = SavedVoice(**data)
-    prompt = Path(v.prompt_path)
-    if not prompt.is_absolute():
-        v.prompt_path = str(VOICES_DIR / prompt)
-    return v
+    """Your own saved voices take priority over built-in ones with the same name."""
+    for directory in (VOICES_DIR, BUILTIN_DIR):
+        p = directory / f"{name}.json"
+        if p.exists():
+            data = json.loads(p.read_text(encoding="utf-8"))
+            v = SavedVoice(**{k: val for k, val in data.items() if k in SavedVoice.__dataclass_fields__})
+            if not Path(v.prompt_path).is_absolute():
+                v.prompt_path = str(directory / v.prompt_path)
+            v.builtin = directory == BUILTIN_DIR
+            return v
+    return None
 
 
-def list_saved() -> list[SavedVoice]:
-    if not VOICES_DIR.exists():
+def _list(directory: Path) -> list[SavedVoice]:
+    if not directory.exists():
         return []
     out = []
-    for p in sorted(VOICES_DIR.glob("*.json")):
+    for p in sorted(directory.glob("*.json")):
         v = load_saved(p.stem)
         if v and Path(v.prompt_path).exists():
             out.append(v)
     return out
 
 
+def list_saved() -> list[SavedVoice]:
+    """Your own saved / cloned voices."""
+    return [v for v in _list(VOICES_DIR) if not v.builtin]
+
+
+def list_builtin() -> list[SavedVoice]:
+    return [v for v in _list(BUILTIN_DIR) if v.builtin]
+
+
 def all_voice_names() -> list[str]:
-    """Saved (locked) voices first, then presets not yet locked."""
-    saved = [v.name for v in list_saved()]
-    return saved + [n for n in PRESETS if n not in saved]
+    """Your saved voices, then built-in ready-made voices, then presets."""
+    names = [v.name for v in list_saved()]
+    names += [v.name for v in list_builtin() if v.name not in names]
+    return names + [n for n in PRESETS if n not in names]

@@ -122,25 +122,25 @@ class Narrator:
         return results
 
     def lock_voice(self, name: str, instruct: str, seed: int = 1, speed: float = 1.0,
-                   language: str | None = "en") -> SavedVoice:
+                   language: str | None = "en", sample_text: str | None = None,
+                   directory: Path = VOICES_DIR, description: str = "") -> SavedVoice:
         """Design a voice once and save it so every narration sounds identical."""
         import soundfile as sf
         import torch
         set_seed(seed)
-        sample_text = lock_sample(language)
+        sample_text = sample_text or lock_sample(language)
         audio = self.model.generate(text=sample_text, instruct=instruct, language=language)[0]
-        VOICES_DIR.mkdir(parents=True, exist_ok=True)
-        sample = VOICES_DIR / f"{name}_sample.wav"
-        sf.write(sample, audio, self.sr)
+        directory.mkdir(parents=True, exist_ok=True)
+        sf.write(directory / f"{name}_sample.wav", audio, self.sr)
         prompt = self.model.create_voice_clone_prompt(
             ref_audio=(torch.from_numpy(audio).float().unsqueeze(0), self.sr),
             ref_text=sample_text,
         )
-        prompt.save(str(VOICES_DIR / f"{name}.pt"))
+        prompt.save(str(directory / f"{name}.pt"))
         v = SavedVoice(name=name, prompt_path=f"{name}.pt", source=f"design:seed{seed}",
-                       instruct=instruct, speed=speed, language=language)
-        save_meta(v)
-        self._prompt_cache.pop(str(VOICES_DIR / f"{name}.pt"), None)
+                       instruct=instruct, speed=speed, language=language, description=description)
+        save_meta(v, directory)
+        self._prompt_cache.pop(str(directory / f"{name}.pt"), None)
         return v
 
     def clone_voice(self, name: str, ref_audio: str, ref_text: str | None,

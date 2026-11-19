@@ -30,6 +30,10 @@ def cmd_voices(_args) -> None:
         print(f"  {v.name:24s} {v.source}  speed={v.speed}")
     if not saved:
         print("  (none yet, create one with: python -m omni_tts lock <name> --preset <preset>)")
+    from .voices import list_builtin
+    print("\nReady-made voices (identical every time):")
+    for v in list_builtin():
+        print(f"  {v.name:24s} {v.description}")
     print("\nPresets (voice design, small variation between runs):")
     for p in PRESETS.values():
         print(f"  {p.name:24s} {p.description}  [{p.instruct}]")
