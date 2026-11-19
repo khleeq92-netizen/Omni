@@ -21,6 +21,17 @@ LOCK_SAMPLE_TEXT = (
     "Welcome back. Today we are going to explore a story that very few people "
     "know about, and by the end of this video, you will see the world a little differently."
 )
+# Saving a voice from a sample in the narration language avoids carrying an
+# English accent into Hindi (and vice versa).
+LOCK_SAMPLES = {
+    "en": LOCK_SAMPLE_TEXT,
+    "hi": ("नमस्कार दोस्तों। आज हम एक ऐसी कहानी के बारे में बात करेंगे, जिसके बारे में बहुत कम लोग "
+           "जानते हैं, और इस वीडियो के अंत तक आप दुनिया को थोड़ा अलग नज़र से देखेंगे।"),
+}
+
+
+def lock_sample(language: str | None) -> str:
+    return LOCK_SAMPLES.get((language or "en").lower()[:2], LOCK_SAMPLE_TEXT)
 
 
 @dataclass
@@ -29,6 +40,7 @@ class Preset:
     instruct: str
     description: str
     speed: float = 1.0
+    language: str | None = "en"
 
 
 PRESETS: dict[str, Preset] = {
@@ -52,6 +64,20 @@ PRESETS: dict[str, Preset] = {
                "Indian-English narrator.", 1.0),
         Preset("indian_english_female", "female, young adult, moderate pitch, indian accent",
                "Indian-English narrator.", 1.0),
+        # Hindi narration (write the script in Devanagari). The accent setting
+        # only applies to English, so Hindi voices use gender/age/pitch.
+        Preset("hindi_male", "male, middle-aged, low pitch",
+               "Hindi narrator, deep and calm, for documentaries and facts.", 0.95, "hi"),
+        Preset("hindi_female", "female, young adult, moderate pitch",
+               "Hindi narrator, clear and friendly, for facts and explainers.", 1.0, "hi"),
+        Preset("hindi_news", "female, middle-aged, moderate pitch",
+               "Hindi news-style narrator.", 1.0, "hi"),
+        Preset("hindi_storyteller", "male, elderly, low pitch",
+               "Hindi storyteller (kahani), older and slow.", 0.9, "hi"),
+        Preset("hindi_young_male", "male, young adult, moderate pitch",
+               "Hindi narrator, energetic, for motivation and Shorts.", 1.0, "hi"),
+        Preset("hindi_mystery", "male, young adult, low pitch, whisper",
+               "Hindi whispered voice for horror and mystery.", 0.9, "hi"),
     ]
 }
 

@@ -52,6 +52,12 @@ def cmd_narrate(args) -> None:
         print(f"  {kind}: {path}")
 
 
+def cmd_preview(args) -> None:
+    from .engine import Narrator
+    path = Narrator(device=args.device).preview(args.voice, args.language, args.text)
+    print(f"Preview: {path}")
+
+
 def cmd_audition(args) -> None:
     from .engine import Narrator
     instruct = PRESETS[args.preset].instruct if args.preset else args.instruct
@@ -73,7 +79,8 @@ def cmd_lock(args) -> None:
         sys.exit("Give --preset or --instruct")
     speed = args.speed if args.speed is not None else (preset.speed if preset else 1.0)
     narrator = Narrator(device=args.device)
-    v = narrator.lock_voice(args.name, instruct, seed=args.seed, speed=speed, language=args.language)
+    lang = args.language or (preset.language if preset else "en")
+    v = narrator.lock_voice(args.name, instruct, seed=args.seed, speed=speed, language=lang)
     print(f"Saved voice '{v.name}' -> voices/{v.name}.pt (sample: voices/{v.name}_sample.wav)")
 
 
@@ -105,6 +112,12 @@ def main(argv: list[str] | None = None) -> None:
     n.add_argument("--no-mp3", action="store_true")
     n.set_defaults(func=cmd_narrate)
 
+    pv = sub.add_parser("preview", help="hear a short sample of a voice")
+    pv.add_argument("voice")
+    pv.add_argument("--text", default=None)
+    pv.add_argument("--language", default=None)
+    pv.set_defaults(func=cmd_preview)
+
     v = sub.add_parser("voices", help="list voices")
     v.set_defaults(func=cmd_voices)
 
@@ -112,7 +125,7 @@ def main(argv: list[str] | None = None) -> None:
     a.add_argument("--preset", choices=list(PRESETS))
     a.add_argument("--instruct")
     a.add_argument("-n", type=int, default=3)
-    a.add_argument("--language", default="en")
+    a.add_argument("--language", default=None, help="default: the preset's language")
     a.add_argument("--out", default="output/auditions")
     a.set_defaults(func=cmd_audition)
 
@@ -122,7 +135,7 @@ def main(argv: list[str] | None = None) -> None:
     lk.add_argument("--instruct")
     lk.add_argument("--seed", type=int, default=1)
     lk.add_argument("--speed", type=float, default=None)
-    lk.add_argument("--language", default="en")
+    lk.add_argument("--language", default=None, help="default: the preset's language")
     lk.set_defaults(func=cmd_lock)
 
     c = sub.add_parser("clone", help="save a voice from a recording (consent required)")

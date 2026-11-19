@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,8 +13,9 @@ import numpy as np
 
 from . import mastering
 from .text_clean import prepare_script
-from .voices import (LOCK_SAMPLE_TEXT, PRESETS, VOICES_DIR, SavedVoice,
-                     load_saved, save_meta)
+from .hindi import normalize_hindi, script_check
+from .voices import (PRESETS, VOICES_DIR, SavedVoice, load_saved, lock_sample,
+                     save_meta)
 
 MODEL_ID = "k2-fsa/OmniVoice"
 
@@ -76,18 +78,19 @@ class Narrator:
             return kw, saved.speed, saved.language
         if voice in PRESETS:
             p = PRESETS[voice]
-            return {"instruct": p.instruct}, p.speed, None
+            return {"instruct": p.instruct}, p.speed, p.language
         if voice == "auto":
             return {}, 1.0, None
         # Free-form description, e.g. "female, elderly, low pitch"
         return {"instruct": voice}, 1.0, None
 
     def audition(self, instruct: str, out_dir: Path, n: int = 3,
-                 text: str = LOCK_SAMPLE_TEXT, language: str | None = "en",
+                 text: str | None = None, language: str | None = "en",
                  seed_start: int = 1) -> list[tuple[int, Path]]:
         """Generate ``n`` candidate voices for one description (one per seed)."""
         import soundfile as sf
         out_dir.mkdir(parents=True, exist_ok=True)
+        text = text or lock_sample(language)
         results = []
         for seed in range(seed_start, seed_start + n):
             set_seed(seed)
@@ -103,13 +106,14 @@ class Narrator:
         import soundfile as sf
         import torch
         set_seed(seed)
-        audio = self.model.generate(text=LOCK_SAMPLE_TEXT, instruct=instruct, language=language)[0]
+        sample_text = lock_sample(language)
+        audio = self.model.generate(text=sample_text, instruct=instruct, language=language)[0]
         VOICES_DIR.mkdir(parents=True, exist_ok=True)
         sample = VOICES_DIR / f"{name}_sample.wav"
         sf.write(sample, audio, self.sr)
         prompt = self.model.create_voice_clone_prompt(
             ref_audio=(torch.from_numpy(audio).float().unsqueeze(0), self.sr),
-            ref_text=LOCK_SAMPLE_TEXT,
+            ref_text=sample_text,
         )
         prompt.save(str(VOICES_DIR / f"{name}.pt"))
         v = SavedVoice(name=name, prompt_path=f"{name}.pt", source=f"design:seed{seed}",
@@ -132,6 +136,20 @@ class Narrator:
         self._prompt_cache.pop(str(VOICES_DIR / f"{name}.pt"), None)
         return v
 
+    def preview(self, voice: str, language: str | None = None, text: str | None = None,
+                out_dir: Path = Path("output/previews")) -> Path:
+        """Speak a short sample in ``voice`` (cached, so repeat previews are instant)."""
+        import hashlib
+        _, _, voice_lang = self._voice_kwargs(voice)
+        lang = language or voice_lang
+        text = (text or "").strip() or lock_sample(lang)
+        key = hashlib.md5(f"{voice}|{lang}|{text}".encode()).hexdigest()[:10]
+        base = out_dir / f"{re.sub(r'[^a-zA-Z0-9_-]+', '_', voice)[:40]}_{key}"
+        wav = base.with_suffix(".wav")
+        if not wav.exists():
+            self.narrate(text, base, voice=voice, language=lang, quality="fast", mp3=False)
+        return wav
+
     # --------------------------------------------------------------- narration
     def narrate(self, script: str, out_base: Path, voice: str = "documentary_male",
                 speed: float | None = None, language: str | None = None,
@@ -141,12 +159,18 @@ class Narrator:
                 mp3: bool = True,
                 progress: Callable[[int, int], None] | None = None) -> NarrationResult:
         t0 = time.time()
+        self.warnings: list[str] = []
+        kw, default_speed, voice_lang = self._voice_kwargs(voice)
+        language = language or voice_lang
+        is_hindi = (language or "").lower() in ("hi", "hindi")
+        if is_hindi:
+            if (w := script_check(script)):
+                self.warnings.append(w)
+            script = normalize_hindi(script)
         paragraphs = prepare_script(script)
         if not paragraphs:
             raise ValueError("The script has no speakable text after cleaning.")
-        kw, default_speed, voice_lang = self._voice_kwargs(voice)
         speed = speed if speed is not None else default_speed
-        language = language or voice_lang
         num_step = {"draft": 12, "fast": 16, "high": 32}.get(quality, 32)
 
         flat = [c for p in paragraphs for c in p.chunks]
@@ -156,7 +180,8 @@ class Narrator:
             batch = flat[i:i + batch_size]
             n = len(batch)
             call = dict(text=batch, language=[language] * n, speed=[speed] * n,
-                        num_step=num_step, normalize_text=_tn_available())
+                        num_step=num_step,
+                        normalize_text=_tn_available() and not is_hindi)
             if "voice_clone_prompt" in kw:
                 call["voice_clone_prompt"] = [kw["voice_clone_prompt"]] * n
             if "instruct" in kw:

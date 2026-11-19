@@ -36,7 +36,8 @@ def _describe(voice: str) -> str:
     if voice in saved:
         return f"Saved voice ({saved[voice].source}), sounds identical every time."
     if voice in PRESETS:
-        return f"{PRESETS[voice].description} Preset: lock it in the Voices tab for full consistency."
+        lang = " · Language: Hindi (write the script in Devanagari)" if PRESETS[voice].language == "hi" else ""
+        return f"{PRESETS[voice].description}{lang} · Preset: save it in the Voices tab for full consistency."
     return "Random voice, changes every run."
 
 
@@ -49,31 +50,47 @@ def do_narrate(script, voice, custom, speed, language, quality, progress=gr.Prog
     base = OUT_DIR / f"{stamp}_{first or 'narration'}"
     n = narrator()
     res = n.narrate(
-        script, base, voice=voice_arg, speed=None if speed == 1.0 and voice_arg in PRESETS else speed,
+        script, base, voice=voice_arg, speed=None if speed == 1.0 else speed,
         language=None if language == "auto" else language, quality=quality,
         progress=lambda d, t: progress(d / t, desc=f"Chunk {d}/{t}"),
     )
     info = (f"{res.duration_s:.1f} s of audio, generated in {res.elapsed_s:.1f} s on {n.device}. "
             f"Loudness -14 LUFS (YouTube standard).")
+    for w in getattr(n, "warnings", []):
+        info += f"\n\n**Note:** {w}"
     files = [str(p) for k, p in res.files.items() if k in ("wav", "mp3")]
     return str(res.files.get("mp3", res.files["wav"])), files, res.text, info
 
 
+def do_preview(voice, custom, language, script, use_script):
+    voice_arg = custom.strip() if custom and custom.strip() else voice
+    text = None
+    if use_script and script and script.strip():
+        from .text_clean import prepare_script
+        paras = prepare_script(script)
+        text = paras[0].chunks[0] if paras else None
+    path = narrator().preview(voice_arg, None if language == "auto" else language, text)
+    return str(path)
+
+
 def do_audition(preset, custom, count):
     instruct = custom.strip() if custom and custom.strip() else PRESETS[preset].instruct
-    results = narrator().audition(instruct, OUT_DIR / "auditions" / time.strftime("%H%M%S"), n=int(count))
+    lang = PRESETS[preset].language if not (custom and custom.strip()) else "en"
+    results = narrator().audition(instruct, OUT_DIR / "auditions" / time.strftime("%H%M%S"),
+                                  n=int(count), language=lang)
     outs = [str(p) for _, p in results] + [None] * (4 - len(results))
     seeds = [s for s, _ in results]
     return (*outs[:4], gr.update(choices=seeds, value=seeds[0]), instruct)
 
 
-def do_lock(name, instruct, seed, speed):
+def do_lock(name, instruct, seed, speed, preset, custom):
     name = re.sub(r"[^a-zA-Z0-9_-]+", "_", (name or "").strip())
     if not name:
         raise gr.Error("Give the voice a name, e.g. my_narrator")
     if not instruct:
         raise gr.Error("Run an audition first.")
-    v = narrator().lock_voice(name, instruct, seed=int(seed), speed=float(speed))
+    lang = PRESETS[preset].language if preset in PRESETS and not (custom and custom.strip()) else "en"
+    v = narrator().lock_voice(name, instruct, seed=int(seed), speed=float(speed), language=lang)
     return (f"Saved '{v.name}'. It now appears in the voice list.",
             gr.update(choices=_voice_choices(), value=v.name))
 
@@ -100,10 +117,16 @@ def build() -> gr.Blocks:
                 with gr.Column(scale=2):
                     voice = gr.Dropdown(_voice_choices(), value=_voice_choices()[0], label="Voice")
                     voice_info = gr.Markdown(_describe(_voice_choices()[0]))
+                    with gr.Row():
+                        preview_btn = gr.Button("🔊 Preview voice", size="sm")
+                        use_script = gr.Checkbox(label="Preview with my script's first line", value=False)
+                    preview_player = gr.Audio(label="Voice preview", type="filepath", autoplay=True)
                     custom = gr.Textbox(label="Or describe a voice (optional)",
                                         placeholder="e.g. female, elderly, low pitch, british accent")
                     speed = gr.Slider(0.7, 1.3, value=1.0, step=0.05, label="Speed")
-                    language = gr.Dropdown(["auto", "en", "hi", "ur", "ar", "es", "fr", "de", "bn"],
+                    language = gr.Dropdown([("Auto (from voice)", "auto"), ("English", "en"), ("Hindi", "hi"),
+                                            ("Urdu", "ur"), ("Bengali", "bn"), ("Arabic", "ar"),
+                                            ("Spanish", "es"), ("French", "fr"), ("German", "de")],
                                            value="auto", label="Language")
                     quality = gr.Radio(["draft", "fast", "high"], value="high", label="Quality")
                     go = gr.Button("Generate voiceover", variant="primary")
@@ -112,6 +135,7 @@ def build() -> gr.Blocks:
             info = gr.Markdown()
             spoken = gr.Textbox(label="Text that was spoken (after cleaning)", lines=6)
             voice.change(_describe, voice, voice_info)
+            preview_btn.click(do_preview, [voice, custom, language, script, use_script], preview_player)
             go.click(do_narrate, [script, voice, custom, speed, language, quality],
                      [player, downloads, spoken, info])
 
@@ -133,7 +157,7 @@ def build() -> gr.Blocks:
             l_btn = gr.Button("Save voice", variant="primary")
             l_msg = gr.Markdown()
             a_btn.click(do_audition, [preset, a_custom, count], [*players, seed, used_instruct])
-            l_btn.click(do_lock, [l_name, used_instruct, seed, l_speed], [l_msg, voice])
+            l_btn.click(do_lock, [l_name, used_instruct, seed, l_speed, preset, a_custom], [l_msg, voice])
 
             gr.Markdown("### Clone a voice from a recording\nUse your own voice, or one you have permission for.")
             with gr.Row():

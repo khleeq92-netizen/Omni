@@ -47,7 +47,8 @@ Then open http://127.0.0.1:7860. On Windows, activate the environment with `.ven
 
 ## Using the app
 
-**Narrate tab:** paste the script, pick a voice, click **Generate voiceover**, then listen and download.
+**Narrate tab:** paste the script, pick a voice, click **🔊 Preview voice** to hear a short sample, then click **Generate voiceover**, listen and download.
+Tick **"Preview with my script's first line"** to hear the voice reading your own text.
 
 **Voices tab:** make the voice the same in every video.
 1. **Audition:** pick a preset (or type a description) and generate 3–4 versions.
@@ -64,7 +65,19 @@ Then open http://127.0.0.1:7860. On Windows, activate the environment with `.ven
 | `storyteller_elder` | Older, slow | Folk tales, stories |
 | `deep_trailer` | Very deep, dramatic | Motivation, trailers |
 | `mystery_whisper` | Whispered | Horror, mystery |
-| `indian_english_male` / `indian_english_female` | Indian-English accent | Indian audience |
+| `indian_english_male` / `indian_english_female` | Indian-English accent | Indian audience, English scripts |
+| `hindi_male` | Hindi, deep and calm | Hindi documentaries, facts |
+| `hindi_female` | Hindi, clear and friendly | Hindi explainers |
+| `hindi_news` | Hindi, news style | Hindi news, current affairs |
+| `hindi_storyteller` | Hindi, older and slow | Kahani, folk tales |
+| `hindi_young_male` | Hindi, energetic | Motivation, Shorts |
+| `hindi_mystery` | Hindi, whispered | Horror, mystery |
+
+### Hindi narration
+- **Write the script in Devanagari** (ask ChatGPT: *"Write this script in Hindi, Devanagari script"*).
+  Roman Hindi (Hinglish) is pronounced poorly, and the app warns you if it detects it.
+- **Numbers are read the way a Hindi narrator says them:** 1947 → उन्नीस सौ सैंतालीस, 1,50,000 → एक लाख पचास हज़ार, ₹500 → पाँच सौ रुपये, 25% → पच्चीस प्रतिशत.
+- **The accent setting only works for English.** For Hindi voices, choose gender, age and pitch instead.
 
 You can also type your own description, combining:
 - **gender:** male, female
@@ -79,6 +92,9 @@ python -m omni_tts voices
 ```
 ```bash
 python -m omni_tts narrate my_script.txt --voice documentary_male
+```
+```bash
+python -m omni_tts preview hindi_male
 ```
 ```bash
 python -m omni_tts audition --preset documentary_male -n 3

@@ -47,3 +47,18 @@ def test_preamble_signoff_labels():
     assert "Let me know" not in " ".join(paras)
     assert "The Discovery." in paras
     assert "history" not in " ".join(paras)
+
+
+def test_hindi_numbers():
+    from omni_tts.hindi import normalize_hindi, number_to_hindi, script_check
+    assert normalize_hindi("सन 1947 में") == "सन उन्नीस सौ सैंतालीस में"
+    assert normalize_hindi("2024 में 1,50,000 लोग") == "दो हज़ार चौबीस में एक लाख पचास हज़ार लोग"
+    assert normalize_hindi("₹500 और 25%") == "पाँच सौ रुपये और पच्चीस प्रतिशत"
+    assert number_to_hindi(123456789) == "बारह करोड़ चौंतीस लाख छप्पन हज़ार सात सौ नवासी"
+    assert script_check("Aaj hum ek bahut hi interesting kahani ke baare mein baat karenge") is not None
+    assert script_check("आज हम एक कहानी के बारे में बात करेंगे") is None
+
+
+def test_hindi_sentence_split():
+    from omni_tts.text_clean import split_sentences
+    assert len(split_sentences("पहला वाक्य। दूसरा वाक्य।", max_chars=12)) == 2
