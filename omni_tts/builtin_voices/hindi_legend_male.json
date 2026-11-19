@@ -1,0 +1,10 @@
+{
+  "name": "hindi_legend_male",
+  "prompt_path": "hindi_legend_male.pt",
+  "source": "design:seed1",
+  "instruct": "male, elderly, very low pitch",
+  "speed": 0.9,
+  "language": "hi",
+  "description": "Hindi: deep, aged, dramatic voice for kahani, legends and spiritual topics.",
+  "builtin": false
+}
