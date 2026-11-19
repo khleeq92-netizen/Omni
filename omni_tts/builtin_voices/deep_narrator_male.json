@@ -1,0 +1,10 @@
+{
+  "name": "deep_narrator_male",
+  "prompt_path": "deep_narrator_male.pt",
+  "source": "design:seed1",
+  "instruct": "male, middle-aged, very low pitch, american accent",
+  "speed": 0.92,
+  "language": "en",
+  "description": "Very deep, powerful American narrator: trailers, documentaries, epic stories.",
+  "builtin": false
+}
