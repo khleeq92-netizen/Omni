@@ -224,7 +224,8 @@ class Narrator:
                 quality: str = "high", seed: int | None = 1234,
                 target_lufs: float = mastering.YOUTUBE_LUFS, batch_size: int = 4,
                 sentence_pause: float = 0.35, paragraph_pause: float = 0.75,
-                mp3: bool = True,
+                mp3: bool = True, style: str = "natural", music: str = "none",
+                music_file: str | None = None, music_volume_db: float = -18.0,
                 progress: Callable[[int, int], None] | None = None) -> NarrationResult:
         t0 = time.time()
         self.warnings = []
@@ -278,6 +279,9 @@ class Narrator:
         full = mastering.assemble(nested, self.sr, sentence_pause, paragraph_pause)
         if use_veena and abs(speed - 1.0) > 0.01:
             full = mastering.change_tempo(full, self.sr, speed)  # Veena has no speed control
+        if style != "natural" or music != "none":
+            from . import effects
+            full = effects.process(full, self.sr, style, music, music_file, music_volume_db)
         full = mastering.master(full, self.sr, target_lufs)
         files = mastering.export(full, self.sr, out_base, mp3=mp3)
         clean_text = "\n\n".join(" ".join(p.chunks) for p in paragraphs)

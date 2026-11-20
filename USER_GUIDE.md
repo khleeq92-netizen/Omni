@@ -105,6 +105,37 @@ Click **🔊 Preview voice** to hear a short sample before converting the whole 
 
 ---
 
+## Part 2b: Voice style & background music 🎚️
+
+### While generating
+In the **Narrate** tab, open **🎚️ Voice style & background music** (under the settings, above the Generate button):
+
+| Voice style | What it does | Good for |
+|---|---|---|
+| **Natural** | No effect | Everything |
+| **Roabdar (रौबदार)** | A bit deeper, fuller bass, more presence, firm compression, a small room | Strong narration, motivation |
+| **Cinematic trailer** | Much deeper, heavy bass, big hall echo | Trailers, epic intros |
+| **Studio warm** | Smooth, warm podcast sound | Explainers, podcasts |
+| **Radio announcer** | Punchy, narrow "radio" sound | News, countdowns |
+| **Dramatic echo** | Long echo, slightly deeper | Horror, mystery |
+| **Electro voice** | Robotic / sci-fi | Tech, sci-fi, intros |
+
+**Background music:**
+- **Electro pulse**: energetic electronic beat (facts, tech).
+- **Dark ambient**: low drone with wind (mystery, horror).
+- **Cinematic drone**: slow, big chords (documentary, history).
+- **My own music file**: upload any mp3/wav. Use music you have the rights to, e.g. the **YouTube Audio Library** or **Pixabay Music** (both free).
+
+The three built-in tracks are made by the tool itself, so there are **no copyright claims**.
+Music gets **quieter automatically while the voice speaks** and comes back up in the pauses.
+**Music volume:** -18 is a good start; -24 is quieter; -12 is louder.
+
+### On a voiceover you already have
+Use the **Effects & Music** tab: upload the voiceover, pick a style and music, click **Apply**, and download.
+Nothing is generated again, so it takes only a few seconds, and you can try every style on the same audio.
+
+---
+
 ## Part 3: Voices
 
 ### ⭐ Ready-made strong male voices

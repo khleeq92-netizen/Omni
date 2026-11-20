@@ -105,3 +105,27 @@ def test_backup_restore_only_voice_files(tmp_path, monkeypatch):
     assert storage.restore_backup(str(z)) == ["me"]
     assert sorted(p.name for p in (tmp_path / "voices").iterdir()) == ["me.json", "me.pt", "pronunciations.txt"]
     assert not (tmp_path.parent / "evil.txt").exists()
+
+
+def test_music_ducks_under_voice():
+    import numpy as np
+    from omni_tts.effects import mix_music
+    sr = 16000
+    voice = np.zeros(6 * sr, np.float32)
+    voice[2 * sr:4 * sr] = 0.3 * np.sin(2 * np.pi * 200 * np.arange(2 * sr) / sr)  # speech 2-4 s
+    music = np.full(7 * sr, 0.1, np.float32)
+    mix = mix_music(voice, sr, music, volume_db=-18, duck_db=8, tail=1.0)
+    music_part = mix - np.pad(voice, (0, len(mix) - len(voice)))
+    quiet = np.abs(music_part[int(0.5 * sr):int(1.5 * sr)]).mean()
+    during = np.abs(music_part[int(2.8 * sr):int(3.2 * sr)]).mean()
+    assert during < quiet * 0.5  # at least ~6 dB quieter while the voice speaks
+
+
+def test_all_styles_run():
+    import numpy as np
+    from omni_tts.effects import STYLES, apply_style
+    sr = 24000
+    x = (0.3 * np.sin(2 * np.pi * 150 * np.arange(sr) / sr)).astype(np.float32)
+    for name in STYLES:
+        y = apply_style(x, sr, name)
+        assert len(y) > 0 and not np.isnan(y).any(), name

@@ -14,7 +14,7 @@ from pathlib import Path
 import gradio as gr
 
 from .engine import Narrator
-from . import pronounce, storage
+from . import effects, pronounce, storage
 from .voices import PRESETS, all_voice_names, list_saved
 
 DESIGN_PRESETS = [n for n, p in PRESETS.items() if p.engine == "omnivoice"]
@@ -52,7 +52,8 @@ def _describe(voice: str) -> str:
     return "Random voice, changes every run."
 
 
-def do_narrate(script, voice, custom, speed, language, quality, progress=gr.Progress()):
+def do_narrate(script, voice, custom, speed, language, quality, style="natural", music="none",
+               music_file=None, music_vol=-18, progress=gr.Progress()):
     if not script or not script.strip():
         raise gr.Error("Paste a script first.")
     voice_arg = custom.strip() if custom and custom.strip() else voice
@@ -63,6 +64,7 @@ def do_narrate(script, voice, custom, speed, language, quality, progress=gr.Prog
     res = n.narrate(
         script, base, voice=voice_arg, speed=None if speed == 1.0 else speed,
         language=None if language == "auto" else language, quality=quality,
+        style=style, music=music, music_file=music_file, music_volume_db=float(music_vol),
         progress=lambda d, t: progress(d / t, desc=f"Chunk {d}/{t}"),
     )
     info = (f"{res.duration_s:.1f} s of audio, generated in {res.elapsed_s:.1f} s on {n.device}. "
@@ -71,6 +73,21 @@ def do_narrate(script, voice, custom, speed, language, quality, progress=gr.Prog
         info += f"\n\n**Note:** {w}"
     files = [str(p) for k, p in res.files.items() if k in ("wav", "mp3")]
     return str(res.files.get("mp3", res.files["wav"])), files, res.text, info
+
+
+def do_effects(audio_path, style, music, music_file, music_vol):
+    """Restyle an existing voiceover: voice style + background music."""
+    import soundfile as sf
+    from . import mastering
+    if not audio_path:
+        raise gr.Error("Upload a voiceover first.")
+    import librosa
+    y, sr = librosa.load(audio_path, sr=48000, mono=True)
+    out = effects.process(y, sr, style, music, music_file, float(music_vol))
+    out = mastering.master(out, sr)
+    base = OUT_DIR / f"{time.strftime('%Y%m%d_%H%M%S')}_styled_{style}_{music}"
+    files = mastering.export(out, sr, base)
+    return str(files.get("mp3", files["wav"])), [str(p) for p in files.values()]
 
 
 def do_preview(voice, custom, language, script, use_script):
@@ -157,6 +174,15 @@ def build() -> gr.Blocks:
                                             ("Spanish", "es"), ("French", "fr"), ("German", "de")],
                                            value="auto", label="Language")
                     quality = gr.Radio(["draft", "fast", "high"], value="high", label="Quality")
+                    with gr.Accordion("🎚️ Voice style & background music", open=False):
+                        style = gr.Dropdown([(c["label"], k) for k, c in effects.STYLES.items()],
+                                            value="natural", label="Voice style")
+                        music = gr.Dropdown([(v, k) for k, v in effects.MUSIC.items()], value="none",
+                                            label="Background music")
+                        music_file = gr.File(label="Your music file (mp3/wav), for 'My own music file'",
+                                             file_types=["audio"], type="filepath")
+                        music_vol = gr.Slider(-30, -8, value=-18, step=1,
+                                              label="Music volume (dB below the voice; lower = quieter)")
                     go = gr.Button("Generate voiceover", variant="primary")
             player = gr.Audio(label="Result", type="filepath")
             downloads = gr.Files(label="Download (WAV 48 kHz/24-bit + MP3 320 kbps)")
@@ -164,7 +190,8 @@ def build() -> gr.Blocks:
             spoken = gr.Textbox(label="Text that was spoken (after cleaning)", lines=6)
             voice.change(_describe, voice, voice_info)
             preview_btn.click(do_preview, [voice, custom, language, script, use_script], preview_player)
-            go.click(do_narrate, [script, voice, custom, speed, language, quality],
+            go.click(do_narrate, [script, voice, custom, speed, language, quality,
+                                  style, music, music_file, music_vol],
                      [player, downloads, spoken, info])
 
         with gr.Tab("Voices"):
@@ -218,6 +245,26 @@ def build() -> gr.Blocks:
 
             b_btn.click(lambda: str(storage.make_backup()), None, b_file)
             r_file.upload(_restore, r_file, [r_msg, voice])
+        with gr.Tab("Effects & Music"):
+            gr.Markdown("### Restyle a voiceover you already have\n"
+                        "Upload any voiceover (for example one you made earlier), choose a voice style and "
+                        "background music, and download the new version. No need to generate it again.\n\n"
+                        "Music gets quieter automatically while the voice is speaking. For your own music, "
+                        "use tracks you have the rights to (e.g. YouTube Audio Library, Pixabay Music).")
+            with gr.Row():
+                fx_in = gr.Audio(label="Your voiceover", type="filepath")
+                with gr.Column():
+                    fx_style = gr.Dropdown([(c["label"], k) for k, c in effects.STYLES.items()],
+                                           value="roabdar", label="Voice style")
+                    fx_music = gr.Dropdown([(v, k) for k, v in effects.MUSIC.items()], value="electro_pulse",
+                                           label="Background music")
+                    fx_file = gr.File(label="Your music file (for 'My own music file')",
+                                      file_types=["audio"], type="filepath")
+                    fx_vol = gr.Slider(-30, -8, value=-18, step=1, label="Music volume (dB below the voice)")
+                    fx_go = gr.Button("Apply", variant="primary")
+            fx_out = gr.Audio(label="Result", type="filepath")
+            fx_files = gr.Files(label="Download")
+            fx_go.click(do_effects, [fx_in, fx_style, fx_music, fx_file, fx_vol], [fx_out, fx_files])
         with gr.Tab("Pronunciation"):
             gr.Markdown(
                 "### Fix words that are spoken wrongly\n"
