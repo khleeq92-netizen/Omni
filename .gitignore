@@ -4,5 +4,6 @@ __pycache__/
 output/
 .pytest_cache/
 .gradio/
-# Saved voices are small and worth keeping; remove these lines' '#' to keep them private.
-# voices/
+# Your own saved / cloned voices are personal data: never commit them.
+# (Built-in voices live in omni_tts/builtin_voices/ instead.)
+voices/
