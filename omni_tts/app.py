@@ -62,12 +62,30 @@ def do_narrate(script, voice, custom, speed, language, quality, style="natural",
     first = re.sub(r"[^a-zA-Z0-9]+", "_", script.strip().split("\n")[0])[:40].strip("_")
     base = OUT_DIR / f"{stamp}_{first or 'narration'}"
     n = narrator()
+    uses_veena = voice_arg in PRESETS and PRESETS[voice_arg].engine == "veena"
+    if uses_veena and n._veena is None:
+        progress(0.01, desc="Loading the Veena model (first time after start: 1-3 min; "
+                            "first use ever downloads ~6.5 GB)…")
+        print("[Omni] Loading Veena model…", flush=True)
+        n.veena
+    elif not uses_veena and n._model is None:
+        progress(0.01, desc="Loading the voice model (first time after start: about 1-2 min)…")
+        print("[Omni] Loading voice model…", flush=True)
+        n.model
+    progress(0.05, desc="Generating… (the first part takes longest)")
+    print(f"[Omni] Generating with voice '{voice_arg}'…", flush=True)
+
+    def _progress(d, t):
+        progress(0.05 + 0.9 * d / t, desc=f"Generating part {d} of {t}…")
+        print(f"[Omni]   part {d}/{t} done", flush=True)
+
     res = n.narrate(
         script, base, voice=voice_arg, speed=None if speed == 1.0 else speed,
         language=None if language == "auto" else language, quality=quality,
         style=style, music=music, music_file=music_file, music_volume_db=float(music_vol),
-        progress=lambda d, t: progress(d / t, desc=f"Chunk {d}/{t}"),
+        progress=_progress,
     )
+    print(f"[Omni] Done: {res.duration_s:.1f} s of audio in {res.elapsed_s:.1f} s → {res.files.get('mp3')}", flush=True)
     info = (f"{res.duration_s:.1f} s of audio, generated in {res.elapsed_s:.1f} s on {n.device}. "
             f"Loudness -14 LUFS (YouTube standard).")
     for w in getattr(n, "warnings", []):
