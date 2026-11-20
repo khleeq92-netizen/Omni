@@ -150,7 +150,7 @@ def main(argv: list[str] | None = None) -> None:
 
     c = sub.add_parser("clone", help="save a voice from a recording (consent required)")
     c.add_argument("name")
-    c.add_argument("--audio", required=True, help="3-10 s clean recording")
+    c.add_argument("--audio", required=True, help="clean recording, 3-20 s (3-10 s without --text)")
     c.add_argument("--text", default=None, help="what is said in the recording (default: auto-transcribe)")
     c.add_argument("--speed", type=float, default=1.0)
     c.add_argument("--language", default=None)

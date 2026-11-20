@@ -145,37 +145,41 @@ class Narrator:
 
     def clone_voice(self, name: str, ref_audio: str, ref_text: str | None,
                     speed: float = 1.0, language: str | None = None,
-                    max_seconds: float = 10.0) -> tuple[SavedVoice, dict]:
-        """Save a voice cloned from a 3-10 s recording (only with the speaker's consent).
+                    max_seconds: float = 10.0, max_with_text: float = 20.0) -> tuple[SavedVoice, dict]:
+        """Save a voice cloned from a recording (only with the speaker's consent).
 
-        Long recordings are trimmed at a natural pause to about ``max_seconds``
-        (longer references are slower and usually clone worse). Returns the
-        saved voice and info: what the tool heard, and how much was trimmed.
+        * With the spoken words typed in (best): the whole recording is used, up
+          to ``max_with_text`` seconds.
+        * Without them: the recording is trimmed at a natural pause to about
+          ``max_seconds`` and transcribed with Whisper in ``language`` (so Hindi
+          comes out in Devanagari rather than Urdu script or Roman letters).
+
+        Returns the saved voice and info (words used, trimming).
         """
         import librosa
         import soundfile as sf
         import torch
         y, sr = librosa.load(ref_audio, sr=self.model.sampling_rate, mono=True)
         info = {"original_s": round(len(y) / sr, 1), "trimmed": False}
-        if len(y) > (max_seconds + 0.5) * sr:
-            limit = int(max_seconds * sr)
+        limit_s = max_with_text if ref_text else max_seconds
+        if len(y) > (limit_s + 0.5) * sr:
+            limit = int(limit_s * sr)
             ends = [e for _, e in librosa.effects.split(y, top_db=35) if e <= limit]
-            cut = ends[-1] if ends and ends[-1] >= 3 * sr else limit
-            y = y[:cut]
+            y = y[:ends[-1] if ends and ends[-1] >= 3 * sr else limit]
             info["trimmed"] = True
-            if ref_text:  # the typed words may no longer match the shorter clip
+            if ref_text:  # the typed words no longer match the shorter clip
                 ref_text = None
                 info["text_dropped"] = True
         info["used_s"] = round(len(y) / sr, 1)
-        if ref_text is None and getattr(self.model, "_asr_pipe", None) is None:
-            self.model.load_asr_model()
+        if not ref_text:
+            ref_text = self._transcribe(y, sr, language)
+            info["auto_text"] = True
         prompt = self.model.create_voice_clone_prompt(
             ref_audio=(torch.from_numpy(y).float().unsqueeze(0), sr), ref_text=ref_text)
         heard = prompt.ref_text.strip()
         info["heard"] = heard
         if language is None:
-            language = "hi" if re.search(r"[\u0900-\u097F]", heard) else (
-                "en" if re.search(r"[A-Za-z]", heard) else None)
+            language = detect_language(heard)
         VOICES_DIR.mkdir(parents=True, exist_ok=True)
         prompt.save(str(VOICES_DIR / f"{name}.pt"))
         sf.write(VOICES_DIR / f"{name}_sample.wav", y, sr)
@@ -185,6 +189,18 @@ class Narrator:
         save_meta(v)
         self._prompt_cache.pop(str(VOICES_DIR / f"{name}.pt"), None)
         return v, info
+
+    def _transcribe(self, y: np.ndarray, sr: int, language: str | None) -> str:
+        """Whisper transcript of a reference clip, in the given language's script."""
+        import librosa
+        if getattr(self.model, "_asr_pipe", None) is None:
+            self.model.load_asr_model()
+        y16 = librosa.resample(y, orig_sr=sr, target_sr=16000)
+        kwargs = {"task": "transcribe"}
+        if language:
+            kwargs["language"] = language
+        out = self.model._asr_pipe({"raw": y16, "sampling_rate": 16000}, generate_kwargs=kwargs)
+        return out["text"].strip()
 
     def preview(self, voice: str, language: str | None = None, text: str | None = None,
                 out_dir: Path = Path("output/previews")) -> Path:
@@ -268,6 +284,17 @@ class Narrator:
         out_base.with_suffix(".txt").write_text(clean_text, encoding="utf-8")
         files["txt"] = out_base.with_suffix(".txt")
         return NarrationResult(files, len(full) / self.sr, time.time() - t0, len(flat), clean_text)
+
+
+def detect_language(text: str) -> str | None:
+    """Guess the language of a transcript from its script."""
+    if re.search(r"[\u0900-\u097F]", text):
+        return "hi"
+    if re.search(r"[\u0600-\u06FF]", text):
+        return "ur"
+    if re.search(r"[A-Za-z]", text):
+        return "en"
+    return None
 
 
 def _tn_available() -> bool:

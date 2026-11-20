@@ -106,23 +106,28 @@ def do_lock(name, instruct, seed, speed, preset, custom):
             gr.update(choices=_voice_choices(), value=v.name))
 
 
-def do_clone(name, audio, text, consent):
+def do_clone(name, audio, text, consent, rec_lang="hi"):
     if not consent:
         raise gr.Error("Only clone a voice you own or have written permission to use.")
     name = re.sub(r"[^a-zA-Z0-9_-]+", "_", (name or "").strip())
     if not name or not audio:
         raise gr.Error("Give a name and upload a 3-10 second recording.")
     n = narrator()
-    v, info = n.clone_voice(name, audio, (text or "").strip() or None)
+    v, info = n.clone_voice(name, audio, (text or "").strip() or None,
+                            language=None if rec_lang == "auto" else rec_lang)
     lines = [f"✅ **Saved cloned voice `{v.name}`.** Listen to it below. It is now selected in the Narrate tab."]
     if info["trimmed"]:
         lines.append(f"✂️ Your recording was {info['original_s']} s, so I used the first {info['used_s']} s "
                      "(3–10 s gives the best clone).")
     if info.get("text_dropped"):
-        lines.append("ℹ️ The typed words were ignored because the recording was shortened.")
-    lines.append(f"👂 **Words heard in your recording:** {info['heard']}")
-    lines.append("If those words are wrong, type exactly what you said in *What is said in it* "
-                 "and click **Save cloned voice** again: correct words give a better clone.")
+        lines.append("ℹ️ The recording was over 20 s, so it was shortened and the typed words were "
+                     "replaced by an automatic transcript.")
+    if info.get("auto_text"):
+        lines.append(f"👂 **Words heard in your recording:** {info['heard']}")
+        lines.append("If those words are wrong, type exactly what you said in *What is said in it* "
+                     "and click **Save cloned voice** again: correct words give a better clone.")
+    else:
+        lines.append(f"📝 Used your typed words and the full {info['used_s']} s recording.")
     preview = str(n.preview(v.name))
     return "\n\n".join(lines), gr.update(choices=_voice_choices(), value=v.name), preview
 
@@ -186,12 +191,16 @@ def build() -> gr.Blocks:
             with gr.Row():
                 c_name = gr.Textbox(label="Voice name")
                 c_audio = gr.Audio(label="3-10 s clean recording", type="filepath")
-                c_text = gr.Textbox(label="What is said in it (optional)")
+                with gr.Column():
+                    c_text = gr.Textbox(label="What is said in it (recommended: type the exact words)")
+                    c_lang = gr.Dropdown([("Hindi", "hi"), ("English", "en"), ("Urdu", "ur"),
+                                          ("Auto-detect", "auto")], value="hi",
+                                         label="Language of the recording")
             c_consent = gr.Checkbox(label="This is my voice, or I have the speaker's permission")
             c_btn = gr.Button("Save cloned voice", variant="primary")
             c_msg = gr.Markdown()
             c_preview = gr.Audio(label="Your cloned voice (sample)", type="filepath", autoplay=True)
-            c_btn.click(do_clone, [c_name, c_audio, c_text, c_consent], [c_msg, voice, c_preview])
+            c_btn.click(do_clone, [c_name, c_audio, c_text, c_consent, c_lang], [c_msg, voice, c_preview])
             gr.Markdown("### Backup & restore\nDownload your saved voices and pronunciation fixes as one file, "
                         "and upload it again in any later session.")
             with gr.Row():
