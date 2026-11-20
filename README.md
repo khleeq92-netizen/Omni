@@ -2,6 +2,11 @@
 
 Turn a script (for example one written with ChatGPT) into a professional voiceover, ready for YouTube.
 
+> ⚠️ **Licence: OmniVoice voices are for NON-COMMERCIAL use only.** The OmniVoice model weights are
+> CC-BY-NC (its training data includes Emilia); only its code is Apache-2.0. This covers every voice made with
+> OmniVoice: presets, built-in male voices, saved and cloned voices. Do not use their audio on a monetised
+> channel or in paid work. **Veena voices (`veena_…`) are Apache-2.0 and may be used commercially.**
+
 **New here? Read the step-by-step [User Guide](USER_GUIDE.md).**
 **Have an Apple Silicon Mac? Run it offline: [Mac Guide](MAC_GUIDE.md).**
 It is built on the open-source [OmniVoice](https://github.com/k2-fsa/OmniVoice) text-to-speech model.

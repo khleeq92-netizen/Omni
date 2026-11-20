@@ -4,6 +4,11 @@ Turn any script (English or Hindi) into a professional voiceover for YouTube, fo
 
 ---
 
+> ⚠️ **Important: commercial use.** All voices except the `veena_…` ones are made with the OmniVoice model,
+> whose licence is **non-commercial only (CC-BY-NC)**. You may use them for learning, testing and personal projects,
+> but **not on a monetised YouTube channel or in paid work**. The **Veena voices are Apache-2.0** and may be
+> used commercially.
+
 ## Part 1: Start the app (every time)
 
 You need a Google account. Nothing gets installed on your computer.

@@ -185,6 +185,8 @@ def do_fill_words(audio, rec_lang):
 def build() -> gr.Blocks:
     with gr.Blocks(title="Omni Voiceover Studio") as demo:
         save_status = gr.Markdown(storage.status())
+        gr.Markdown("⚠️ **Licence:** voices made with OmniVoice (all except `veena_…`) are for "
+                    "**non-commercial use only** (CC-BY-NC model). `veena_…` voices (Apache-2.0) may be used commercially.")
         gr.Markdown("# Omni Voiceover Studio\nPaste your script (Markdown from ChatGPT is fine; "
                     "headings, bullets, emojis and stage directions are cleaned automatically).")
         with gr.Tab("Narrate"):
