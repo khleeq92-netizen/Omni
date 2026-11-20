@@ -190,6 +190,12 @@ class Narrator:
         self._prompt_cache.pop(str(VOICES_DIR / f"{name}.pt"), None)
         return v, info
 
+    def transcribe_file(self, path: str, language: str | None = "hi", max_seconds: float = 20.0) -> str:
+        """Guess the words in a recording (first ``max_seconds``), for the user to correct."""
+        import librosa
+        y, sr = librosa.load(path, sr=16000, mono=True)
+        return self._transcribe(y[: int(max_seconds * sr)], sr, language)
+
     def _transcribe(self, y: np.ndarray, sr: int, language: str | None) -> str:
         """Whisper transcript of a reference clip, in the given language's script."""
         import librosa

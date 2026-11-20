@@ -146,7 +146,21 @@ def do_clone(name, audio, text, consent, rec_lang="hi"):
     else:
         lines.append(f"📝 Used your typed words and the full {info['used_s']} s recording.")
     preview = str(n.preview(v.name))
+    import soundfile as sf
+    dur = sf.info(preview).duration
+    if dur > 22:  # the sample sentence normally takes 8-14 s
+        lines.insert(0, "⚠️ **This clone looks broken** (the sample came out far too long). Almost always "
+                        "the words don't match the recording: type exactly what is said, or use a "
+                        "shorter, clearer recording, and save again.")
     return "\n\n".join(lines), gr.update(choices=_voice_choices(), value=v.name), preview
+
+
+def do_fill_words(audio, rec_lang):
+    if not audio:
+        raise gr.Error("Upload or record the audio first.")
+    text = narrator().transcribe_file(audio, None if rec_lang == "auto" else rec_lang)
+    return text, ("✍️ **Check these words and correct any mistakes**, then click **Save cloned voice**. "
+                  "Correct words are the biggest factor in a good clone.")
 
 
 def build() -> gr.Blocks:
@@ -219,7 +233,8 @@ def build() -> gr.Blocks:
                 c_name = gr.Textbox(label="Voice name")
                 c_audio = gr.Audio(label="3-10 s clean recording", type="filepath")
                 with gr.Column():
-                    c_text = gr.Textbox(label="What is said in it (recommended: type the exact words)")
+                    c_text = gr.Textbox(label="Exact words said in the recording (important!)", lines=2)
+                    c_fill = gr.Button("✍️ Fill words automatically", size="sm")
                     c_lang = gr.Dropdown([("Hindi", "hi"), ("English", "en"), ("Urdu", "ur"),
                                           ("Auto-detect", "auto")], value="hi",
                                          label="Language of the recording")
@@ -228,6 +243,7 @@ def build() -> gr.Blocks:
             c_msg = gr.Markdown()
             c_preview = gr.Audio(label="Your cloned voice (sample)", type="filepath", autoplay=True)
             c_btn.click(do_clone, [c_name, c_audio, c_text, c_consent, c_lang], [c_msg, voice, c_preview])
+            c_fill.click(do_fill_words, [c_audio, c_lang], [c_text, c_msg])
             gr.Markdown("### Backup & restore\nDownload your saved voices and pronunciation fixes as one file, "
                         "and upload it again in any later session.")
             with gr.Row():
