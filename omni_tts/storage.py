@@ -17,6 +17,9 @@ def status() -> str:
     if str(real).startswith("/content/drive"):
         return ("✅ **Your voices and fixes are saved in Google Drive** (My Drive → Omni). "
                 "They will still be here next time.")
+    if Path("/kaggle").exists():
+        return ("⚠️ **On Kaggle, saved and cloned voices are NOT kept after the session stops.** "
+                "Before stopping, use **Voices tab → ⬇️ Download backup**; next time, upload it under **⬆️ Restore**.")
     if Path("/content").exists():  # running on Colab without Drive
         return ("⚠️ **Your saved and cloned voices are NOT kept after Colab closes.** "
                 "Turn on Google Drive in the notebook (cell 2, `USE_DRIVE = True`), "

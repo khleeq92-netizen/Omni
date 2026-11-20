@@ -39,6 +39,33 @@ You need a Google account. Nothing gets installed on your computer.
 
 ---
 
+## Part 1b: If Colab says "Cannot connect to GPU backend"
+
+Colab's free GPU time has run out for now. It counts every minute the GPU is connected, **even when idle**.
+It usually comes back within 12–24 hours. Meanwhile, use **Kaggle**, which gives about **30 free GPU hours per week**.
+
+**One-time setup (about 5 minutes):**
+1. Go to **https://www.kaggle.com** and sign in (you can use your Google account).
+2. Click your profile picture → **Settings** → **Phone verification**, and verify your phone number. Kaggle requires this for GPU and internet.
+
+**Every time:**
+1. Go to **https://www.kaggle.com/code** → **+ New Notebook**.
+2. Click **File → Import Notebook**, choose the **Link** tab and paste:
+   `https://github.com/khleeq92-netizen/Omni/blob/claude/serene-edison-dhp0kf/Omni_Kaggle.ipynb`
+   then click **Import**.
+3. In the right-side panel, open **Session options** (or **Settings**):
+   - **Accelerator → GPU T4 x2**
+   - **Internet → On**
+4. Click **Run All** (top toolbar). After 3–5 minutes, click the `gradio.live` link at the bottom.
+5. **When finished:** in the **Voices** tab, click **⬇️ Download backup** (Kaggle has no Google Drive),
+   then click the **⏻ Stop session** button so you don't waste GPU hours.
+6. Next time, upload that backup file under **⬆️ Restore** in the Voices tab.
+
+**Avoid running out of free GPU time:** prepare your scripts first, generate them all in one session, then disconnect
+(Colab: **Runtime → Disconnect and delete runtime**; Kaggle: **⏻ Stop session**).
+
+---
+
 ## Part 2: Make a voiceover
 
 ### Step 1: Paste your script
@@ -298,7 +325,7 @@ But there was no one on board. Not a single person.
 | **`cd: Omni: No such file or directory`** | The GitHub repo is private. Make it public on GitHub: Settings → General → Change visibility |
 | Colab asks to **Restart session** | Click **Restart**, then click **Run all** again |
 | The **gradio.live link stopped working** | Colab disconnected. Click **Run all** again to get a new link |
-| **"You cannot connect to a GPU"** | The free GPU limit is reached for today. Try again later, or use Colab Pro |
+| **"Cannot connect to GPU backend"** | Colab's free GPU time has run out. Use **Kaggle** (Part 1b) or wait 12–24 hours |
 | **First voiceover is very slow** | Normal: the model downloads once per session (3–5 minutes) |
 | **Hindi sounds wrong** | Try a `veena_…` voice; make sure the script is in Devanagari (or Hinglish for Veena) |
 | **One word is always wrong** | Add it in the **Pronunciation** tab |
