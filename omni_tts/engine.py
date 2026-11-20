@@ -144,18 +144,47 @@ class Narrator:
         return v
 
     def clone_voice(self, name: str, ref_audio: str, ref_text: str | None,
-                    speed: float = 1.0, language: str | None = None) -> SavedVoice:
-        """Save a voice cloned from a 3-10 s recording (only with the speaker's consent)."""
-        if ref_text is None:
+                    speed: float = 1.0, language: str | None = None,
+                    max_seconds: float = 10.0) -> tuple[SavedVoice, dict]:
+        """Save a voice cloned from a 3-10 s recording (only with the speaker's consent).
+
+        Long recordings are trimmed at a natural pause to about ``max_seconds``
+        (longer references are slower and usually clone worse). Returns the
+        saved voice and info: what the tool heard, and how much was trimmed.
+        """
+        import librosa
+        import soundfile as sf
+        import torch
+        y, sr = librosa.load(ref_audio, sr=self.model.sampling_rate, mono=True)
+        info = {"original_s": round(len(y) / sr, 1), "trimmed": False}
+        if len(y) > (max_seconds + 0.5) * sr:
+            limit = int(max_seconds * sr)
+            ends = [e for _, e in librosa.effects.split(y, top_db=35) if e <= limit]
+            cut = ends[-1] if ends and ends[-1] >= 3 * sr else limit
+            y = y[:cut]
+            info["trimmed"] = True
+            if ref_text:  # the typed words may no longer match the shorter clip
+                ref_text = None
+                info["text_dropped"] = True
+        info["used_s"] = round(len(y) / sr, 1)
+        if ref_text is None and getattr(self.model, "_asr_pipe", None) is None:
             self.model.load_asr_model()
-        prompt = self.model.create_voice_clone_prompt(ref_audio=ref_audio, ref_text=ref_text)
+        prompt = self.model.create_voice_clone_prompt(
+            ref_audio=(torch.from_numpy(y).float().unsqueeze(0), sr), ref_text=ref_text)
+        heard = prompt.ref_text.strip()
+        info["heard"] = heard
+        if language is None:
+            language = "hi" if re.search(r"[\u0900-\u097F]", heard) else (
+                "en" if re.search(r"[A-Za-z]", heard) else None)
         VOICES_DIR.mkdir(parents=True, exist_ok=True)
         prompt.save(str(VOICES_DIR / f"{name}.pt"))
+        sf.write(VOICES_DIR / f"{name}_sample.wav", y, sr)
         v = SavedVoice(name=name, prompt_path=f"{name}.pt", source=f"clone:{Path(ref_audio).name}",
-                       instruct=None, speed=speed, language=language)
+                       instruct=None, speed=speed, language=language,
+                       description=f"Cloned from a recording. Words: {heard}")
         save_meta(v)
         self._prompt_cache.pop(str(VOICES_DIR / f"{name}.pt"), None)
-        return v
+        return v, info
 
     def preview(self, voice: str, language: str | None = None, text: str | None = None,
                 out_dir: Path = Path("output/previews")) -> Path:
@@ -164,7 +193,9 @@ class Narrator:
         _, _, voice_lang = self._voice_kwargs(voice)
         lang = language or voice_lang
         text = (text or "").strip() or lock_sample(lang)
-        key = hashlib.md5(f"{voice}|{lang}|{text}".encode()).hexdigest()[:10]
+        saved = load_saved(voice)
+        stamp = Path(saved.prompt_path).stat().st_mtime if saved and Path(saved.prompt_path).exists() else 0
+        key = hashlib.md5(f"{voice}|{lang}|{text}|{stamp}".encode()).hexdigest()[:10]
         base = out_dir / f"{re.sub(r'[^a-zA-Z0-9_-]+', '_', voice)[:40]}_{key}"
         wav = base.with_suffix(".wav")
         if not wav.exists():

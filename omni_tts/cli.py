@@ -93,7 +93,11 @@ def cmd_lock(args) -> None:
 def cmd_clone(args) -> None:
     from .engine import Narrator
     narrator = Narrator(device=args.device)
-    v = narrator.clone_voice(args.name, args.audio, args.text, speed=args.speed, language=args.language)
+    v, info = narrator.clone_voice(args.name, args.audio, args.text, speed=args.speed,
+                                   language=args.language)
+    if info["trimmed"]:
+        print(f"Recording was {info['original_s']} s; used the first {info['used_s']} s.")
+    print(f"Heard: {info['heard']}")
     print(f"Saved cloned voice '{v.name}' -> voices/{v.name}.pt")
 
 
