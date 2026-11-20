@@ -62,6 +62,6 @@ It asks before deleting your voices.
 | `zsh: command not found: curl` | Very unlikely on macOS. Restart the Mac and try again |
 | Stops with "Download failed" | Check Wi-Fi and run the command again; it continues where it stopped |
 | The browser didn't open | Open **http://127.0.0.1:7860** yourself |
-| "Address already in use" | Omni Studio is already running: check the other Terminal window |
+| "Cannot find empty port" / "Address already in use" | An old copy is still running. Paste `pkill -f omni_tts.app` in Terminal, then open Omni Studio again (newer versions do this automatically) |
 | "Omni Studio can't be opened" | Run the install command again |
 | Veena says it needs a download | Connect to the internet once and try again |
