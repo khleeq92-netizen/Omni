@@ -89,3 +89,19 @@ def test_pronunciation_rules():
     assert rules == {"शाहजहाँ": "शाह जहाँ", "YouTube": "यूट्यूब"}
     assert apply("शाहजहाँ ने youtube देखा", rules) == "शाह जहाँ ने यूट्यूब देखा"
     assert apply("शाहजहाँओं", rules) == "शाहजहाँओं"  # whole words only
+
+
+def test_backup_restore_only_voice_files(tmp_path, monkeypatch):
+    import zipfile
+    from omni_tts import storage
+    monkeypatch.setattr(storage, "VOICES_DIR", tmp_path / "voices")
+    z = tmp_path / "b.zip"
+    with zipfile.ZipFile(z, "w") as f:
+        f.writestr("../../evil.txt", "x")
+        f.writestr("run.py", "x")
+        f.writestr("pronunciations.txt", "a = b")
+        f.writestr("folder/me.json", "{}")
+        f.writestr("me.pt", "x")
+    assert storage.restore_backup(str(z)) == ["me"]
+    assert sorted(p.name for p in (tmp_path / "voices").iterdir()) == ["me.json", "me.pt", "pronunciations.txt"]
+    assert not (tmp_path.parent / "evil.txt").exists()

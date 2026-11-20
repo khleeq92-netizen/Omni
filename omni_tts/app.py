@@ -14,7 +14,7 @@ from pathlib import Path
 import gradio as gr
 
 from .engine import Narrator
-from . import pronounce
+from . import pronounce, storage
 from .voices import PRESETS, all_voice_names, list_saved
 
 DESIGN_PRESETS = [n for n, p in PRESETS.items() if p.engine == "omnivoice"]
@@ -118,6 +118,7 @@ def do_clone(name, audio, text, consent):
 
 def build() -> gr.Blocks:
     with gr.Blocks(title="Omni Voiceover Studio") as demo:
+        save_status = gr.Markdown(storage.status())
         gr.Markdown("# Omni Voiceover Studio\nPaste your script (Markdown from ChatGPT is fine; "
                     "headings, bullets, emojis and stage directions are cleaned automatically).")
         with gr.Tab("Narrate"):
@@ -179,6 +180,23 @@ def build() -> gr.Blocks:
             c_btn = gr.Button("Save cloned voice")
             c_msg = gr.Markdown()
             c_btn.click(do_clone, [c_name, c_audio, c_text, c_consent], [c_msg, voice])
+            gr.Markdown("### Backup & restore\nDownload your saved voices and pronunciation fixes as one file, "
+                        "and upload it again in any later session.")
+            with gr.Row():
+                b_btn = gr.Button("⬇️ Download backup")
+                b_file = gr.File(label="Backup file", interactive=False)
+                r_file = gr.File(label="⬆️ Restore: upload a backup .zip", file_types=[".zip"], type="filepath")
+            r_msg = gr.Markdown()
+
+            def _restore(path):
+                if not path:
+                    return "", gr.update()
+                names = storage.restore_backup(path)
+                msg = f"Restored {len(names)} voice(s): {', '.join(names)}" if names else "No voices found in that file."
+                return msg, gr.update(choices=_voice_choices())
+
+            b_btn.click(lambda: str(storage.make_backup()), None, b_file)
+            r_file.upload(_restore, r_file, [r_msg, voice])
         with gr.Tab("Pronunciation"):
             gr.Markdown(
                 "### Fix words that are spoken wrongly\n"

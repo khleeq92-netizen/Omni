@@ -161,8 +161,14 @@ Preset voices change slightly between runs. For a channel, save one fixed voice:
    - Click **Save voice**.
 5. Your voice now appears at the top of the **Voice** list and sounds the same every time.
 
-> 💡 Saved voices are lost when Colab closes, unless you turn on Google Drive. Do this once:
-> in the notebook, in the cell `# 2. (Optional)`, change `USE_DRIVE = False` to `USE_DRIVE = True` before you click **Run all**, and allow Drive access when asked.
+### Where your voices are kept 💾
+- When you click **Run all**, Colab asks to **connect Google Drive**. Click **Connect to Google Drive**, choose your account and click **Allow**.
+- Your saved voices, cloned voices, pronunciation fixes and every voiceover you make are then kept in **My Drive → Omni**,
+  and they're there again next time.
+- The top of the app shows **✅ Your voices and fixes are saved in Google Drive** when this is working.
+  If it shows **⚠️ … NOT kept after Colab closes** instead, Drive isn't connected; run all the cells again and allow access.
+- **Extra safety:** in the **Voices** tab, **⬇️ Download backup** saves all your voices in one `.zip` file on your computer.
+  To bring them back in any session, upload that file under **⬆️ Restore**.
 
 ### Clone your own voice
 1. Record **3–10 seconds** of yourself speaking clearly in a quiet room.
@@ -201,7 +207,7 @@ Preset voices change slightly between runs. For a channel, save one fixed voice:
 3. Click **Save fixes**. From now on the word is said correctly in every voiceover.
 4. To check a fix, type a sentence in **Test a sentence** and press Enter to see exactly how it will be read.
 
-Your fixes are saved with your voices, so they're kept in Google Drive when `USE_DRIVE = True`.
+Your fixes are saved with your voices in Google Drive (My Drive → Omni), and included in **Download backup**.
 
 ---
 
@@ -297,7 +303,8 @@ But there was no one on board. Not a single person.
 | **Hindi sounds wrong** | Try a `veena_…` voice; make sure the script is in Devanagari (or Hinglish for Veena) |
 | **One word is always wrong** | Add it in the **Pronunciation** tab |
 | **A word is pronounced wrong** | Spell it the way it sounds, or use phoneme spelling for English |
-| **Saved voice disappeared** | Turn on `USE_DRIVE = True` so voices are kept in Google Drive |
+| **Saved voice disappeared** | Allow Google Drive access when you click **Run all**, and check the ✅ line at the top of the app. Or restore from a **backup .zip** (Voices tab) |
+| **Colab didn't ask about Google Drive** | You may be using an old copy of the notebook. Open the bookmarked GitHub link again, or set `USE_DRIVE = True` in cell 2 |
 
 ---
 
