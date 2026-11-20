@@ -23,7 +23,7 @@ You need a Google account. Nothing gets installed on your computer.
 
 ### Step 3: Run everything
 1. Close any side panel on the right (click its **✕**).
-2. In the top toolbar, click **▷ Run all**.
+2. In the top toolbar, click **▷ Run all**. When Colab asks about Google Drive, click **Connect to Google Drive** and **Allow**, so your voices are saved.
 3. If a pop-up says *"This notebook was not authored by Google"*, click **Run anyway**.
 
 ### Step 4: Open the app
