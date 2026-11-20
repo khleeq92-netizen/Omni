@@ -229,9 +229,13 @@ Preset voices change slightly between runs. For a channel, save one fixed voice:
   To bring them back in any session, upload that file under **⬆️ Restore**.
 
 ### Clone your own voice
-1. Record **3–10 seconds** of yourself speaking clearly in a quiet room.
-2. In the **Voices** tab, under **Clone a voice**, upload the recording and give it a name.
-3. Tick the consent box and click **Save cloned voice**.
+1. Record **5–15 seconds** of clear speech in a quiet room, in the language you'll use for videos.
+2. In the **Voices** tab, under **Clone a voice from a recording**, upload or record it and give it a name.
+3. Set **Language of the recording** (Hindi by default).
+4. **Words, the most important step ✍️:** type exactly what is said, **or** click **✍️ Fill words automatically**
+   and then **correct** any mistakes. Wrong words are the No. 1 reason a clone fails (strange, too long or mumbled output).
+5. Tick the consent box and click **Save cloned voice**. A sample plays straight away, and the voice is selected in Narrate.
+6. If the app says *"This clone looks broken"*, fix the words or use a clearer recording, and save again.
 
 > ⚠️ Only clone your own voice, or a voice you have written permission to use. Never clone celebrities or other YouTubers.
 
