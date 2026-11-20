@@ -337,8 +337,42 @@ def main() -> None:
     ap.add_argument("--share", action="store_true", help="create a public gradio.live link")
     ap.add_argument("--inbrowser", action="store_true", help="open the app in the browser")
     args = ap.parse_args()
-    build().queue().launch(server_name=args.host, server_port=args.port, share=args.share,
-                           inbrowser=args.inbrowser)
+
+    # Already open (e.g. the app was double-clicked twice)? Just show it.
+    if not args.share:
+        running = _find_running(args.port)
+        if running:
+            url = f"http://127.0.0.1:{running}"
+            print(f"Omni Studio is already running at {url}. Opening it in the browser.")
+            if args.inbrowser:
+                import webbrowser
+                webbrowser.open(url)
+            return
+
+    demo = build().queue()
+    last_error = None
+    for port in range(args.port, args.port + 20):  # next free port if this one is taken
+        try:
+            demo.launch(server_name=args.host, server_port=port, share=args.share,
+                        inbrowser=args.inbrowser)
+            return
+        except OSError as e:
+            last_error = e
+            print(f"Port {port} is busy, trying {port + 1}…")
+    raise SystemExit(f"Could not start Omni Studio: {last_error}")
+
+
+def _find_running(start: int, count: int = 10) -> int | None:
+    """Port of an Omni Studio already serving on this computer, if any."""
+    import urllib.request
+    for port in range(start, start + count):
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1) as r:
+                if b"Omni Voiceover Studio" in r.read(200_000):
+                    return port
+        except Exception:
+            continue
+    return None
 
 
 if __name__ == "__main__":
