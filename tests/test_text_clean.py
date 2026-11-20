@@ -129,3 +129,10 @@ def test_all_styles_run():
     for name in STYLES:
         y = apply_style(x, sr, name)
         assert len(y) > 0 and not np.isnan(y).any(), name
+
+
+def test_english_numbers_without_wetext():
+    from omni_tts.english import normalize_english as n
+    assert n("In 1859, 3,000 ships sailed.") == "In eighteen fifty-nine, three thousand ships sailed."
+    assert n("It costs $100 or 2.5% more.") == "It costs one hundred dollars or two point five percent more."
+    assert n("The 21st century [laughter]") == "The twenty-first century [laughter]"
