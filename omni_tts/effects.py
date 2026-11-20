@@ -16,6 +16,8 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+from .tools import ffmpeg_exe
+
 # ----------------------------------------------------------------- voice styles
 # pitch: semitones (librosa, keeps timing); ffmpeg: audio filter chain.
 STYLES: dict[str, dict] = {
@@ -65,12 +67,12 @@ MUSIC = {
 
 
 def _ffmpeg_filter(audio: np.ndarray, sr: int, chain: str) -> np.ndarray:
-    if not chain or not shutil.which("ffmpeg"):
+    if not chain or not ffmpeg_exe():
         return audio
     with tempfile.TemporaryDirectory() as d:
         src, dst = Path(d) / "in.wav", Path(d) / "out.wav"
         sf.write(src, audio, sr, subtype="FLOAT")
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-af", chain,
+        subprocess.run([ffmpeg_exe(), "-y", "-loglevel", "error", "-i", str(src), "-af", chain,
                         "-ar", str(sr), "-ac", "1", str(dst)], check=True)
         out, _ = sf.read(dst, dtype="float32")
     return out

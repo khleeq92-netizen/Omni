@@ -45,7 +45,8 @@ def _describe(voice: str) -> str:
         return f"Your saved voice ({v.source}), sounds identical every time."
     if voice in PRESETS and PRESETS[voice].engine == "veena":
         return (f"{PRESETS[voice].description} · Fixed voice, sounds the same every time. "
-                "Hindi in Devanagari, English, or mixed Hinglish all work.")
+                "Hindi in Devanagari, English, or mixed Hinglish all work. "
+                "Note: the first Veena voiceover downloads about 6.5 GB (one time).")
     if voice in PRESETS:
         lang = " · Language: Hindi (write the script in Devanagari)" if PRESETS[voice].language == "hi" else ""
         return f"{PRESETS[voice].description}{lang} · Preset: save it in the Voices tab for full consistency."
@@ -316,8 +317,10 @@ def main() -> None:
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=7860)
     ap.add_argument("--share", action="store_true", help="create a public gradio.live link")
+    ap.add_argument("--inbrowser", action="store_true", help="open the app in the browser")
     args = ap.parse_args()
-    build().queue().launch(server_name=args.host, server_port=args.port, share=args.share)
+    build().queue().launch(server_name=args.host, server_port=args.port, share=args.share,
+                           inbrowser=args.inbrowser)
 
 
 if __name__ == "__main__":

@@ -10,10 +10,13 @@ the exact same voice.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-VOICES_DIR = Path(__file__).resolve().parent.parent / "voices"
+# Your own voices. The Mac app keeps them in ~/Documents/Omni Studio/voices.
+VOICES_DIR = Path(os.environ["OMNI_VOICES_DIR"]).expanduser() if os.environ.get("OMNI_VOICES_DIR") \
+    else Path(__file__).resolve().parent.parent / "voices"
 # Ready-made saved voices shipped with the tool (kept separate from VOICES_DIR,
 # which Colab may replace with a Google Drive folder).
 BUILTIN_DIR = Path(__file__).resolve().parent / "builtin_voices"

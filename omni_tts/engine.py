@@ -79,7 +79,11 @@ class Narrator:
     def veena(self):
         if self._veena is None:
             from .veena import VeenaEngine
-            self._veena = VeenaEngine(device=self.device)
+            try:
+                self._veena = VeenaEngine(device=self.device)
+            except OSError as e:  # not downloaded yet and no internet
+                raise RuntimeError("Veena voices need a one-time download (about 6.5 GB). "
+                                   "Connect to the internet and try again.") from e
         return self._veena
 
     # ------------------------------------------------------------------ voices
@@ -200,7 +204,11 @@ class Narrator:
         """Whisper transcript of a reference clip, in the given language's script."""
         import librosa
         if getattr(self.model, "_asr_pipe", None) is None:
-            self.model.load_asr_model()
+            try:
+                self.model.load_asr_model()
+            except OSError as e:
+                raise RuntimeError("Recognising words needs a one-time download (about 1.6 GB). "
+                                   "Connect to the internet, or type the words yourself.") from e
         y16 = librosa.resample(y, orig_sr=sr, target_sr=16000)
         kwargs = {"task": "transcribe"}
         if language:
@@ -255,6 +263,11 @@ class Narrator:
         flat = [c for p in paragraphs for c in p.chunks]
         audios: list[np.ndarray] = []
         set_seed(seed)
+        english = (language or "en").lower() in ("en", "english")
+        if english and not _tn_available():
+            # e.g. on Mac (no WeTextProcessing wheel): read numbers with num2words
+            from .english import normalize_english
+            flat = [normalize_english(c) for c in flat]
         if use_veena:
             if not is_hindi and _tn_available():
                 from omnivoice.utils.text import normalize_text as _norm

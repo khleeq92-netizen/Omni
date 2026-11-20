@@ -14,6 +14,8 @@ import numpy as np
 import soundfile as sf
 from scipy.signal import butter, sosfilt
 
+from .tools import ffmpeg_exe
+
 YOUTUBE_LUFS = -14.0      # YouTube normalises playback to about -14 LUFS
 PODCAST_LUFS = -16.0
 PEAK_CEILING_DB = -1.0
@@ -53,13 +55,13 @@ def assemble(paragraphs: list[list[np.ndarray]], sr: int,
 def change_tempo(audio: np.ndarray, sr: int, speed: float) -> np.ndarray:
     """Speed up / slow down without changing pitch (ffmpeg atempo)."""
     import tempfile
-    if not shutil.which("ffmpeg"):
+    if not ffmpeg_exe():
         return audio
     speed = min(max(speed, 0.5), 2.0)
     with tempfile.TemporaryDirectory() as d:
         src, dst = Path(d) / "in.wav", Path(d) / "out.wav"
         sf.write(src, audio, sr)
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src),
+        subprocess.run([ffmpeg_exe(), "-y", "-loglevel", "error", "-i", str(src),
                         "-filter:a", f"atempo={speed:.3f}", str(dst)], check=True)
         out, _ = sf.read(dst, dtype="float32")
     return out
@@ -104,10 +106,10 @@ def export(audio: np.ndarray, sr: int, out_base: Path, mp3: bool = True) -> dict
         np.clip(audio, -0.999, 0.999, out=audio)
     sf.write(wav, audio, target_sr, subtype="PCM_24")
     out["wav"] = wav
-    if mp3 and shutil.which("ffmpeg"):
+    if mp3 and ffmpeg_exe():
         mp3_path = out_base.with_suffix(".mp3")
         subprocess.run(
-            ["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav),
+            [ffmpeg_exe(), "-y", "-loglevel", "error", "-i", str(wav),
              "-codec:a", "libmp3lame", "-b:a", "320k", str(mp3_path)],
             check=True,
         )

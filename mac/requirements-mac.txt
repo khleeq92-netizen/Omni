@@ -1,0 +1,13 @@
+# Apple Silicon (M1-M4). PyTorch from PyPI includes Mac GPU (MPS) support.
+torch
+torchaudio
+omnivoice>=0.2.1
+# WeTextProcessing (omnivoice[tn]) has no Apple Silicon wheel: num2words is used instead.
+num2words
+imageio-ffmpeg   # portable ffmpeg for MP3 export and voice effects (no Homebrew needed)
+pyloudnorm>=0.1.1
+scipy
+snac
+gradio
+librosa
+soundfile
